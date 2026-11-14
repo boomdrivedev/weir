@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use common::read;
 use weir_kinds::toml::Table;
-use weir_kinds::{Deliverable, End};
+use weir_kinds::{Deliverable, End, Repeat};
 
 fn table(text: &str) -> Table {
     text.parse().unwrap()
@@ -243,6 +243,24 @@ fn a_stage_reads_whether_it_hibernates() {
     for stage in &talk.stages {
         assert!(stage.sections.is_empty(), "{}", stage.name);
     }
+}
+
+#[test]
+fn any_stage_may_hibernate() {
+    // A conversation that waits and a stage that repeats each hibernate:
+    // weir judges `hibernate` against no other field of the stage (53, 58;
+    // core.32).
+    let talk = &read("hibernate-on-any-stage.toml").unwrap().kinds["talk"];
+    let draft = &talk.stages[0];
+    assert_eq!(draft.name, "draft");
+    assert_eq!(draft.end, End::Conversation);
+    assert!(draft.wait);
+    assert_eq!(draft.hibernate, Some(true));
+    let build = &talk.stages[1];
+    assert_eq!(build.name, "build");
+    assert_eq!(build.end, End::Deliverable(Deliverable::Tasks));
+    assert_eq!(build.repeat, Some(Repeat::PerTaskGroup));
+    assert_eq!(build.hibernate, Some(true));
 }
 
 // A deliverable is one of six spellings.
