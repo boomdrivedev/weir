@@ -49,6 +49,17 @@ C.7).
 - **WHEN** a case's declaration gives `talk` the stages `draft`, a conversation that waits with `hibernate = true`, `code`, delivering commits with `hibernate = false`, and `review`, a conversation declaring no `hibernate`
 - **THEN** the case cites 53 and 58 and expects `draft` hibernating, `code` not hibernating and `review` with `hibernate` left out, and the crate gives each
 
+### Requirement: A case whose stage differs in its hibernate is named
+A stage a declaration's kinds case expects with `hibernate` left out
+SHALL be one read with it left out, and a case whose stage differs from
+the stage read in its `hibernate` SHALL be named, with the stages read
+and the stages the case expects (C.4 as amended at blueprints 30dce35;
+C.7).
+
+#### Scenario: A case whose stage differs in its hibernate is named
+- **WHEN** a case expects `talk`'s one stage `draft`, a conversation, with `hibernate = true`, and the stage read leaves `hibernate` out
+- **THEN** the crate's tests give one difference naming the case, the stages read with `draft`'s `hibernate` left out and the stages the case expects with it `true`
+
 ## MODIFIED Requirements
 
 ### Requirement: A declaration's kinds case gives each kind's version, stages and landing fix
@@ -59,15 +70,8 @@ how many it runs where it names them, and neither where it does not.
 Each stage SHALL give its name, its deliverable or that it is a
 conversation, its `repeat` where it repeats, and its `hibernate`, `true`
 or `false`, where it declares one (C.4 as amended at blueprints
-30dce35; C.7). A stage the case expects with `hibernate` left out SHALL
-be one read with it left out. A case whose stage differs from the stage
-read in its `hibernate` SHALL be named, with the stages read and the
-stages the case expects.
+30dce35; C.7).
 
 #### Scenario: A kind that names its fix, and one with stages that may not
 - **WHEN** one case's declaration gives `train` `lands = true`, `stages = []`, `landing_fix = "acme/fix@1"` and `max_landing_fixes = 2`, a second gives `bump` one stage, `lands = true`, `landing_fix = "acme/fix@1"` and `max_landing_fixes = 2`, and a third holds a package whose one file is a `kind.toml` declaring `train` as the first does, held at `acme/train@1`
 - **THEN** the first expects `train` at version 1 with no stages, `landing_fix` `acme/fix@1` and `max_landing_fixes` 2; the second the refusal naming `kinds.bump.landing_fix` and then `kinds.bump.max_landing_fixes`; the third the identity `acme/train@1`, the hash of that one file and `train` with `landing_fix` `acme/fix@1` and `max_landing_fixes` 2; and the crate gives each
-
-#### Scenario: A case whose stage differs in its hibernate is named
-- **WHEN** a case expects `talk`'s one stage `draft`, a conversation, with `hibernate = true`, and the stage read leaves `hibernate` out
-- **THEN** the crate's tests give one difference naming the case, the stages read with `draft`'s `hibernate` left out and the stages the case expects with it `true`
