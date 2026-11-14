@@ -1123,3 +1123,33 @@ fn a_landing_fix_that_is_no_identity_is_a_case_of_its_own() {
     );
     assert_eq!(differences(name, &bare), Vec::<String>::new());
 }
+
+/// A stage that hibernates, one that does not and one that leaves it out,
+/// a case of its own (53, 58; C.4 as amended at blueprints 30dce35; C.7).
+#[test]
+fn a_stage_that_hibernates_is_a_case_of_its_own() {
+    let name = "a-stage-that-hibernates";
+    let hibernates = case(name);
+    let cites: Vec<i64> = hibernates
+        .satisfies
+        .iter()
+        .filter_map(toml::Value::as_integer)
+        .collect();
+    assert_eq!(cites, [53, 58]);
+    let kinds = declaration_expect(&hibernates).kinds.as_ref().unwrap();
+    let expected: Vec<_> = kinds["talk"]
+        .stages
+        .iter()
+        .map(|stage| (stage.name.as_str(), stage.hibernate))
+        .collect();
+    assert_eq!(
+        expected,
+        [
+            ("draft", Some(true)),
+            ("code", Some(false)),
+            ("review", None)
+        ],
+        "{name}"
+    );
+    assert_eq!(differences(name, &hibernates), Vec::<String>::new());
+}
