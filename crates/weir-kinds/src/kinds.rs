@@ -4,7 +4,7 @@ use std::time::Duration;
 use toml::{Table, Value};
 
 use crate::deliverable::{Deliverable, End};
-use crate::fields::{boolean, field, key, strings, unnamed};
+use crate::fields::{boolean, field, flag, key, strings, unnamed};
 use crate::identity::Identity;
 use crate::name::not_a_kinds_name;
 use crate::quiet;
@@ -39,7 +39,7 @@ const DECLARING_FIELDS: [&str; 8] = [
 ];
 
 /// The fields of a stage the format names; every other key is a section.
-const STAGE_FIELDS: [&str; 12] = [
+const STAGE_FIELDS: [&str; 13] = [
     "name",
     "prompt",
     "standing",
@@ -52,6 +52,7 @@ const STAGE_FIELDS: [&str; 12] = [
     "on_fail",
     "max_send_backs",
     "repeat",
+    "hibernate",
 ];
 
 /// A declaration read: every kind it declares, the settings it gives kinds
@@ -152,6 +153,12 @@ pub struct Stage {
     /// is tasks ticked repeats (57); how a reader works a repetition is its
     /// own (58).
     pub repeat: Option<Repeat>,
+    /// Whether it hibernates, its agent let go once idle and its session
+    /// resumed later, as written; `None` when left out, since the format
+    /// gives no default (53, 58, C.4). Any stage may declare it, and what
+    /// hibernating means, and what a stage that leaves it out does, are its
+    /// reader's (58; core.32).
+    pub hibernate: Option<bool>,
     /// Every key of the stage the format does not name, unread and as
     /// written (56).
     pub sections: Table,
@@ -574,6 +581,10 @@ fn read_stage(stage: &Table, at: &str, problems: &mut Problems) -> Stage {
         }
     };
     let repeat = read_repeat(stage, &end, end_read, at, problems);
+    // Read last, so a stage's refusals name its `hibernate` after every
+    // other field, and judged against no other field of the stage (53, 58;
+    // core.32).
+    let hibernate = flag(stage, "hibernate", at, problems);
     Stage {
         name,
         prompt,
@@ -586,6 +597,7 @@ fn read_stage(stage: &Table, at: &str, problems: &mut Problems) -> Stage {
         on_fail,
         max_send_backs,
         repeat,
+        hibernate,
         sections: unnamed(stage, &STAGE_FIELDS),
     }
 }

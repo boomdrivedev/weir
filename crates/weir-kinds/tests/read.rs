@@ -221,6 +221,30 @@ fn a_stages_quiet_time_reads_as_a_duration() {
     );
 }
 
+// A stage reads whether it hibernates, as written, and left out when left
+// out (53, 56, 58; C.4 as amended at blueprints 30dce35).
+
+#[test]
+fn a_stage_reads_whether_it_hibernates() {
+    let talk = &read("hibernates.toml").unwrap().kinds["talk"];
+    let hibernates: Vec<_> = talk
+        .stages
+        .iter()
+        .map(|s| (s.name.as_str(), s.hibernate))
+        .collect();
+    assert_eq!(
+        hibernates,
+        [
+            ("draft", Some(true)),
+            ("code", Some(false)),
+            ("review", None)
+        ]
+    );
+    for stage in &talk.stages {
+        assert!(stage.sections.is_empty(), "{}", stage.name);
+    }
+}
+
 // A deliverable is one of six spellings.
 
 #[test]
