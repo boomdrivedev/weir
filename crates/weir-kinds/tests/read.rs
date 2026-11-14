@@ -263,6 +263,17 @@ fn any_stage_may_hibernate() {
     assert_eq!(build.hibernate, Some(true));
 }
 
+#[test]
+fn a_hibernate_on_a_kinds_table_is_a_section() {
+    // On a kind's table `hibernate` is no field the format names, and is
+    // never read as its stages' (53, 56; core.30).
+    let talk = &read("hibernate-on-a-kind.toml").unwrap().kinds["talk"];
+    assert_eq!(talk.sections, table("hibernate = true"));
+    let draft = &talk.stages[0];
+    assert_eq!(draft.name, "draft");
+    assert_eq!(draft.hibernate, None);
+}
+
 // A deliverable is one of six spellings.
 
 #[test]
