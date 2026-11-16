@@ -11,9 +11,12 @@
 #                          the pack's protocol cases: landed
 #   crates/weir-bounded    a call to a remote run to the family's limit
 #                          for a try, ended with everything it started
-#   crates/weir-kinds      the kind format, with an elaboration kind's
-#                          section, a kind's identity, its package and
-#                          content hash, and a lock of kinds: landed
+#   crates/weir-kinds      the kind format, its simple and statechart
+#                          kinds, with an elaboration kind's section, a
+#                          kind's identity, its package and content hash,
+#                          and a lock of kinds: landed
+#   crates/weir-engine     a statechart's types, which weir-kinds reads a
+#                          statechart kind into and the engine ticks
 #   crates/weir-cadence    five-field cron, caught up once: landed
 #   crates/weir-delivery   a delivery's four records in recutils and JSON,
 #                          and record, hand, confirm and owed over a

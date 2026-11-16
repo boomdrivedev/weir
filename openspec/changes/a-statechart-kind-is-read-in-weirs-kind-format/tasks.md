@@ -45,4 +45,4 @@ checks once every task is done.
 
 ## 6. The README
 
-- [ ] 6.1 Add `weir-engine` to the README's crate table after `weir-kinds`, "A statechart's types, which `weir-kinds` reads a statechart kind into and the engine ticks", and have `weir-kinds`'s row name simple and statechart kinds. List `crates/weir-engine` in the comment over `Cargo.toml`'s `members` (design 14). True when `devenv shell -- moon run root:prose` passes.
+- [x] 6.1 Add `weir-engine` to the README's crate table after `weir-kinds`, "A statechart's types, which `weir-kinds` reads a statechart kind into and the engine ticks", and have `weir-kinds`'s row name simple and statechart kinds. List `crates/weir-engine` in the comment over `Cargo.toml`'s `members` (design 14). True when `devenv shell -- moon run root:prose` passes.
