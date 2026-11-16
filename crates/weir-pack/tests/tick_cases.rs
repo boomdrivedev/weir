@@ -165,3 +165,79 @@ fn a_case_read_from_its_folder() {
     assert_eq!(case.id, "tick/the-lamp-switched-on");
     assert_eq!(run_tick_case(&case), Ok(()));
 }
+
+/// The cases design 17 names, each with the clauses it cites.
+const THE_CASES: [(&str, &[u32]); 15] = [
+    ("the-lamp-switched-on", &[96, 98, 99]),
+    ("the-lamp-on-with-its-proof-present", &[96, 98, 99]),
+    ("an-effect-whose-proof-is-present", &[96]),
+    ("the-first-transition-whose-guard-holds", &[96]),
+    ("innermost-first", &[96]),
+    ("a-sibling-sees-a-move-at-the-next-tick", &[96]),
+    ("a-transition-to-its-own-state-with-nothing-to-do", &[96]),
+    ("a-template-started-afresh", &[97]),
+    ("a-final-state-of-what-a-state-runs", &[96, 97]),
+    ("an-enter-moves-what-a-state-ran", &[96, 97]),
+    ("a-response-applied-once", &[97]),
+    ("a-response-already-applied", &[97]),
+    ("a-response-binds-its-argument", &[96, 97]),
+    ("a-guard-by-age", &[96]),
+    ("evidence-read-at-its-region", &[96]),
+];
+
+#[test]
+fn the_cases_named() {
+    use std::collections::BTreeSet;
+    use weir_pack::Clause;
+
+    let pack = Pack::embedded();
+    let names: BTreeSet<String> = pack
+        .cases(Shape::Tick)
+        .into_iter()
+        .map(|case| case.name)
+        .collect();
+    let named: BTreeSet<String> = THE_CASES.iter().map(|(name, _)| name.to_string()).collect();
+    assert_eq!(names, named, "the pack's tick cases are design 17's");
+    for (name, cites) in THE_CASES {
+        let case = pack.case(Shape::Tick, name).expect("the case");
+        let read = read_tick_case(&case).unwrap_or_else(|why| panic!("{why}"));
+        let satisfies: Vec<Clause> = cites.iter().copied().map(Clause::number).collect();
+        assert_eq!(read.satisfies, satisfies, "{name}");
+        assert_eq!(read.chart.name, "lamp", "{name}");
+        let atoms_of = |chart: &weir_engine::Statechart| {
+            let names = weir_engine::names(chart);
+            names
+                .evidence
+                .into_iter()
+                .chain(names.effects)
+                .chain(names.machines)
+                .collect::<Vec<_>>()
+        };
+        for atom in std::iter::once(&read.chart)
+            .chain(read.templates.values())
+            .flat_map(atoms_of)
+        {
+            assert!(
+                atom.starts_with("lamp.")
+                    || atom.starts_with("bulb.")
+                    || ["light", "set_mode", "cool", "bulb"].contains(&atom.as_str()),
+                "{name} names `{atom}`, no atom of the lamp or the bulb"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_tick_cases() {
+    let pack = Pack::embedded();
+    let cases = pack.cases(Shape::Tick);
+    assert_eq!(cases.len(), THE_CASES.len());
+    let failed: Vec<String> = cases
+        .iter()
+        .flat_map(|case| match read_tick_case(case) {
+            Err(why) => vec![why],
+            Ok(read) => run_tick_case(&read).err().unwrap_or_default(),
+        })
+        .collect();
+    assert_eq!(failed, Vec::<String>::new());
+}

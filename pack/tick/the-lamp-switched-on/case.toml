@@ -1,0 +1,37 @@
+# S21's first tick: S21's lamp, its two states alone, is ticked in `off`
+# with `lamp.switch` read `up` and `lamp.lit` not read. `power` moves from
+# `off` to `on`, planning `light` at entry, and the next state holds `power`
+# in `on` (96, 98, 99; S21).
+satisfies = [96, 98, 99]
+declaration = """
+[kinds.lamp]
+version = 1
+title = "Lamp"
+
+[kinds.lamp.regions.power]
+initial = "off"
+
+[kinds.lamp.regions.power.states.off]
+transitions = [{ when = { ev = "lamp.switch", is = "up" }, to = "on" }]
+
+[kinds.lamp.regions.power.states.on]
+entry = [{ do = "light" }]
+"""
+chart = "lamp"
+proofs = { light = "lamp.lit" }
+
+[state]
+regions = { power = "off" }
+entered_at = { power = 2026-09-04T12:00:00Z }
+
+[snapshot]
+at = 2026-09-04T12:01:00Z
+evidence = { "lamp.switch" = "up" }
+
+[expect]
+fired = [
+  { region = "power", from = "off", to = "on", effects = [
+    { do = "light", region = "power", phase = "entry" },
+  ] },
+]
+next = { regions = { power = "on" }, entered_at = { power = 2026-09-04T12:01:00Z } }
