@@ -1,3 +1,13 @@
+## Purpose
+
+The engine a statechart kind runs on, in `weir-engine`: the tick, one
+pure function over a statechart, the templates it runs, the proofs its
+reader names, one object's state and one snapshot, giving the
+transitions that fire with their effects and the object's next state;
+an object's first state, the decisions standing in a state and the
+names a statechart reads and runs, each answering from its inputs,
+holding no store and naming no reader's object or atom (96 to 99; S21).
+
 ## ADDED Requirements
 
 ### Requirement: The tick answers from its inputs alone

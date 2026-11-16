@@ -1,3 +1,11 @@
+## Purpose
+
+The pack's `tick` cases: how a case's folder holds a statechart kind,
+its templates, its proofs, one object's state, one snapshot and the
+tick it expects, how `weir-pack` reads one through the kind format and
+runs it twice against weir's engine, and the cases the pack holds, the
+toy lamp's of S21 among them (65, 96 to 99; C.7; S21).
+
 ## ADDED Requirements
 
 ### Requirement: A tick case is read whole
