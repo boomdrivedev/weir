@@ -18,7 +18,7 @@ fn id(text: &str) -> SignalId {
 fn a_signal(signal: &str) -> Signal {
     Signal {
         signal: id(signal),
-        kind: Nature::Ask,
+        kind: Some(Nature::Ask),
         asserted_by: "jdx/mise".into(),
         assertion: "mise 2026.10.10 is released; the repository pins 2026.9.18.".into(),
         subjects: vec!["release".into(), "mise".into()],
@@ -149,6 +149,7 @@ fn a_signal_with_a_field_left_empty_is_refused_naming_it() {
             .take(&Taken {
                 capture: capture("release/a"),
                 own_signal: None,
+                rule_move: None,
             })
             .unwrap(),
     );
@@ -183,7 +184,7 @@ fn a_signal_of_an_unknown_nature() {
 fn every_nature_reads_back() {
     for kind in Nature::ALL {
         let signal = Signal {
-            kind,
+            kind: Some(kind),
             ..a_signal("release/x#1")
         };
         let written = signals_rec(std::slice::from_ref(&signal));
@@ -233,6 +234,7 @@ fn taken_with_own(key: &str, cut: Option<LeftOut>) -> Taken {
             ..capture(key)
         },
         own_signal: Some(own_signal(key, cut)),
+        rule_move: None,
     }
 }
 
@@ -279,6 +281,7 @@ fn an_unread_capture() {
     let taken = Taken {
         capture: capture("release/a"),
         own_signal: None,
+        rule_move: None,
     };
     let inbox = empty();
     let write = inbox.take(&taken).unwrap();
@@ -304,6 +307,7 @@ fn a_held_key() {
         .take(&Taken {
             capture: capture("release/a"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0.len(), 1);
@@ -326,6 +330,7 @@ fn a_taken_capture_agrees_with_its_own_signal() {
                 ..capture("release/a")
             },
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0[0].field.as_deref(), Some("unread"));
@@ -344,6 +349,7 @@ fn a_taken_capture_agrees_with_its_own_signal() {
                 ..capture("release/a")
             },
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0[0].field.as_deref(), Some("came_in"));
@@ -379,6 +385,7 @@ fn with_meeting() -> InboxAt {
         .take(&Taken {
             capture: capture("meeting/file/ab12"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap();
     after(&inbox, &write)

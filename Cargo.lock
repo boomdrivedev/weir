@@ -1406,6 +1406,7 @@ dependencies = [
  "time",
  "toml",
  "weir-capture",
+ "weir-policy",
 ]
 
 [[package]]

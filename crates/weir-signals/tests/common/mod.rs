@@ -43,7 +43,7 @@ pub fn recsel_value(text: &str, name: &str) -> String {
     printed.strip_suffix('\n').unwrap_or(&printed).to_string()
 }
 
-use weir_capture::{CameIn, Capture, Key, RawFile, Taken};
+use weir_capture::{CameIn, Capture, Facts, Key, RawFile, Taken};
 use weir_signals::{InboxAt, NewMove, ReadSignal, SignalId, Write};
 
 /// The key `text`, which the test expects the rule to take.
@@ -64,6 +64,7 @@ pub fn capture(key_text: &str) -> Capture {
         machine: "deneb".into(),
         taken_at: "2026-10-17T04:30:05Z".into(),
         unread: true,
+        facts: Facts::new(),
     }
 }
 
@@ -116,6 +117,7 @@ pub fn with_read(inbox: &InboxAt, taken: Capture, n: usize) -> InboxAt {
             .take(&Taken {
                 capture: taken,
                 own_signal: None,
+                rule_move: None,
             })
             .unwrap_or_else(|refused| panic!("{refused}")),
     );

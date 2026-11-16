@@ -7,6 +7,7 @@ description = "The inbox: its signals, moves, batches, items, briefs and sends i
 
 [dependencies]
 weir-capture = { path = "../weir-capture" }
+weir-policy = { path = "../weir-policy" }
 time.workspace = true
 
 [dev-dependencies]

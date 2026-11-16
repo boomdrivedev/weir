@@ -643,6 +643,7 @@ fn an_old_unmoved_signal() {
             .take(&weir_capture::Taken {
                 capture: old,
                 own_signal: None,
+                rule_move: None,
             })
             .unwrap(),
     );

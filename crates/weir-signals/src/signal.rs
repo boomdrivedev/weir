@@ -61,8 +61,9 @@ pub(crate) fn count(text: &str) -> Option<u64> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Signal {
     pub signal: SignalId,
-    /// Its nature, in the field `kind` (25; record 0002).
-    pub kind: Nature,
+    /// Its nature, in the field `kind` (25; record 0002), none for an own
+    /// signal a rule made (127).
+    pub kind: Option<Nature>,
     pub asserted_by: String,
     pub assertion: String,
     pub subjects: Vec<String>,
@@ -93,13 +94,15 @@ impl Signal {
     }
 
     /// The record, `format` first, then the fields in C.2's order: a list
-    /// as one field per entry and none for an empty one, `cut` only where
-    /// the excerpt was cut.
+    /// as one field per entry and none for an empty one, `kind` only where
+    /// there is a nature, `cut` only where the excerpt was cut.
     pub fn to_record(&self) -> Record {
         let mut record = Record::new();
         record.push("format", Format::Signal.as_str());
         record.push("signal", self.signal.to_string());
-        record.push("kind", self.kind.as_str());
+        if let Some(kind) = self.kind {
+            record.push("kind", kind.as_str());
+        }
         record.push("asserted_by", self.asserted_by.as_str());
         record.push("assertion", self.assertion.as_str());
         record.push_list("subjects", &self.subjects);
@@ -114,14 +117,19 @@ impl Signal {
 
     /// The signal of a `weir-signal/1` record, refused naming the field
     /// that is missing, given twice or not of its shape. A text field left
-    /// empty is lacking, as a reading's is (25); the lists may be empty.
+    /// empty is lacking, as a reading's is (25); the lists may be empty. A
+    /// record with no `kind` reads as a signal of no nature, which only an
+    /// own signal a rule made may be, as the inbox's read checks (127).
     pub fn from_record(record: &Record) -> Result<Signal, RecError> {
         Format::of_record(record, &[Format::Signal])?;
         let signal = record.required("signal")?;
         let signal = SignalId::parse(signal).map_err(|reason| RecError::field("signal", reason))?;
-        let kind = record.required("kind")?;
-        let kind =
-            Nature::parse(kind).ok_or_else(|| RecError::field("kind", not_a_nature(kind)))?;
+        let kind = match record.single("kind")? {
+            None => None,
+            Some(kind) => Some(
+                Nature::parse(kind).ok_or_else(|| RecError::field("kind", not_a_nature(kind)))?,
+            ),
+        };
         let cut = match record.single("cut")? {
             None => None,
             Some(text) => Some(read_cut(text).ok_or_else(|| {
@@ -215,7 +223,7 @@ impl ReadSignal {
         match kind {
             Some(kind) if failures.is_empty() => Ok(Signal {
                 signal: id,
-                kind,
+                kind: Some(kind),
                 asserted_by: self.asserted_by.clone(),
                 assertion: self.assertion.clone(),
                 subjects: self.subjects.clone(),
