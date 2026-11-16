@@ -1,0 +1,35 @@
+# A lamp whose `off` moves to itself, with nothing to do, before moving `on`
+# under the same guard. Ticked in `off` with `lamp.switch` read `up`, nothing
+# fires and the region tries no later transition: reading twice with nothing
+# changed writes nothing (96).
+satisfies = [96]
+declaration = """
+[kinds.lamp]
+version = 1
+title = "Lamp"
+
+[kinds.lamp.regions.power]
+initial = "off"
+
+[kinds.lamp.regions.power.states.off]
+transitions = [
+  { when = { ev = "lamp.switch", is = "up" }, to = "off" },
+  { when = { ev = "lamp.switch", is = "up" }, to = "on" },
+]
+
+[kinds.lamp.regions.power.states.on]
+"""
+chart = "lamp"
+proofs = {}
+
+[state]
+regions = { power = "off" }
+entered_at = { power = 2026-09-04T12:00:00Z }
+
+[snapshot]
+at = 2026-09-04T12:01:00Z
+evidence = { "lamp.switch" = "up" }
+
+[expect]
+fired = []
+next = { regions = { power = "off" }, entered_at = { power = 2026-09-04T12:00:00Z } }
