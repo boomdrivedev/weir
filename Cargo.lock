@@ -1376,6 +1376,7 @@ dependencies = [
  "tempfile",
  "toml",
  "weir-capture",
+ "weir-engine",
 ]
 
 [[package]]

@@ -10,6 +10,7 @@ use crate::name::not_a_kinds_name;
 use crate::quiet;
 use crate::refusal::{not_toml, Problems, Refusal};
 use crate::repeat::Repeat;
+use crate::statechart::StatechartKind;
 
 /// The fields of a kind the format names; every other key is a section.
 const KIND_FIELDS: [&str; 8] = [
@@ -54,13 +55,18 @@ const STAGE_FIELDS: [&str; 12] = [
     "repeat",
 ];
 
-/// A declaration read: every kind it declares, the settings it gives kinds
+/// A declaration read: every kind it declares, simple and statechart, the settings it gives kinds
 /// it does not declare, and every section beside them (81).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Declaration {
-    /// Every kind under the `kinds` table, by name, in name order; none
-    /// when there is no `kinds` table (51, 52).
+    /// Every simple kind under the `kinds` table, by name, in name order;
+    /// none when there is no `kinds` table (51, 52).
     pub kinds: BTreeMap<String, Kind>,
+    /// Every statechart kind under the `kinds` table, a table holding
+    /// `regions` and no `stages`, by name, in name order; none when there
+    /// is none (51, 81, 94; C.4). A name is under one of `kinds` and
+    /// `statecharts` at most.
+    pub statecharts: BTreeMap<String, StatechartKind>,
     /// Every `[kinds.<kind>]` table that holds `agents` and nothing that
     /// declares a kind, by name, in name order: settings given to a kind of
     /// that name declared elsewhere, never a kind with no stage (57, C.4).
@@ -255,8 +261,10 @@ pub fn read_kinds(text: &str) -> Result<Declaration, Refusal> {
         }
         Some(_) => problems.refuse("kinds", "must be a table of kinds"),
     }
+    let statecharts = BTreeMap::new();
     problems.finish(Declaration {
         kinds,
+        statecharts,
         settings,
         sections: unnamed(&root, &["kinds"]),
     })
