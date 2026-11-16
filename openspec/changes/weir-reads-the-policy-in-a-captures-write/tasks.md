@@ -49,7 +49,7 @@ repository's whole checks once every task is done.
 
 ## 5. The crates built on weir-capture
 
-- [ ] 5.1 Give the folder drop's `Offer` in `crates/weir-adapters/src/folder.rs`, and every other builder of `Offer` in weir-adapters, an empty `Facts`: the built-in adapters state no fact (61, 62). True when `devenv shell -- moon run adapters:test` passes.
+- [x] 5.1 Give the folder drop's `Offer` in `crates/weir-adapters/src/folder.rs`, and every other builder of `Offer` in weir-adapters, an empty `Facts`: the built-in adapters state no fact (61, 62). True when `devenv shell -- moon run adapters:test` passes.
 
 ## 6. The README
 
