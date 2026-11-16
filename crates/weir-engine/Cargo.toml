@@ -9,6 +9,9 @@ license.workspace = true
 # The values a statechart holds as written, a guard's compared values, an
 # effect's arguments and every key the format does not name (C.4).
 toml.workspace = true
+# The snapshot's time, a region's entered time and an age measured to it
+# (96).
+time.workspace = true
 
 [lib]
 doctest = false
