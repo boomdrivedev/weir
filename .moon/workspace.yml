@@ -20,6 +20,7 @@ projects:
   delivery: 'crates/weir-delivery'
   kinds: 'crates/weir-kinds'
   pack: 'crates/weir-pack'
+  policy: 'crates/weir-policy'
   signals: 'crates/weir-signals'
   weir: 'crates/weir'
   root: '.'
