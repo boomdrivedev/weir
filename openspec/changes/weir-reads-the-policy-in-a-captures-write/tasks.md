@@ -53,4 +53,4 @@ repository's whole checks once every task is done.
 
 ## 6. The README
 
-- [ ] 6.1 Add `weir-policy` to the README's table of crates: the facts a signal carries, the people list they are joined from, and the keeper's policy, read and checked once for every host, which `weir-capture`'s `take` reads in a capture's write. True when `devenv shell -- moon run root:prose` passes.
+- [x] 6.1 Add `weir-policy` to the README's table of crates: the facts a signal carries, the people list they are joined from, and the keeper's policy, read and checked once for every host, which `weir-capture`'s `take` reads in a capture's write. True when `devenv shell -- moon run root:prose` passes.
