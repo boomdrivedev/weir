@@ -42,12 +42,11 @@ public, and none keeps state or knows which tool or host uses it.
 | path | what |
 |---|---|
 | `Cargo.toml` | the Rust workspace, with no crates yet |
-| `devenv.nix` | the shell: moon through proto, and Vale |
+| `devenv.nix` | the shell: moon through proto, and OpenSpec |
 | `.config/kit.toml` | the kit standard's profile this repository follows |
 
 ```sh
-devenv shell -- check-fast   # format, prose and the commit hooks, through moon
-devenv shell -- prose        # the prose, through Vale
+devenv shell -- check-fast   # format, the commit hooks, the specs and each crate's checks, through moon
 ```
 
 ## License
