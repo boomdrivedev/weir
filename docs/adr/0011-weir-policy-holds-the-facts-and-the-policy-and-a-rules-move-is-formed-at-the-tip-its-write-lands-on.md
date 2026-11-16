@@ -11,7 +11,7 @@ decision-makers:
 
 Status: proposed on 2026-11-15 by the construct stage of the change `weir-reads-the-policy-in-a-captures-write`. It is that stage's own choice, made on the statement and the rules written, and cheap to change: it holds no choice of the user's. What the statement fixes, it follows as written; this record decides only where the code lies and what C.9 leaves open.
 
-Sources: the brief of the change `weir-reads-the-policy-in-a-captures-write`; the statement in boomdrivedev/blueprints, `design/weir/requirements.md`, 2, 13, 16, 19, 24 to 26, 31, 36, 70, 84, 117 to 129, C.1, C.2, C.5, C.9, section 9 and I10 as amended at blueprints `63a14c5` and `104f847`, read at `30dce35`; its research `design/research/2026-11-11-update-ladder.html`, whose meeting example states its attendees as addresses; millpond's statement, 125 to 132, and its rule core.1 on boomdrivedev/millpond's `design/millponds-constitution` at `75b0cea`, which has millpond write a rule's own signal and its move as `take` hands them; `crates/weir-capture/src/take.rs`, `crates/weir-signals/src/write.rs` and `crates/weir-cadence/src/schedule.rs` at `5e3f128`; rules core.1, core.4, core.6, core.13, core.14, core.16, core.20, core.26, core.33 and core.55 to core.58.
+Sources: the brief of the change `weir-reads-the-policy-in-a-captures-write`; the statement in boomdrivedev/blueprints, `design/weir/requirements.md`, 2, 13, 16, 19, 24 to 26, 31, 36, 70, 84, 117 to 129, C.1, C.2, C.5, C.9, section 9 and I10 as amended at blueprints `63a14c5` and `104f847`, read at `30dce35`; its research `design/research/2026-11-11-update-ladder.html`, whose meeting example states its attendees as addresses; millpond's statement, 125 to 132, and its rule core.1 on boomdrivedev/millpond's `design/millponds-constitution` at `75b0cea`, which has millpond write a rule's own signal and its move as `take` hands them; `crates/weir-capture/src/take.rs`, `crates/weir-signals/src/write.rs` and `crates/weir-cadence/src/schedule.rs` at `5e3f128`; rules core.1, core.4, core.6, core.13, core.14, core.16, core.20, core.26, core.33, core.56 to core.58 and core.60.
 
 ## Context and problem statement
 
@@ -24,7 +24,7 @@ Three things are left to weir. Which crate depends on which, so `take` can read 
 For where the code lies:
 
 1. **`weir-policy` holds the facts, the people list and the policy, and depends on `weir-cadence` alone; `weir-capture` depends on it, and `take` calls it** (chosen).
-2. **The facts in `weir-capture`, and `weir-policy` over them, `take` reading the policy through a trait its host hands in.** A host could hand a reader of its own, which millpond's core.1 and core.55 rule out.
+2. **The facts in `weir-capture`, and `weir-policy` over them, `take` reading the policy through a trait its host hands in.** A host could hand a reader of its own, which millpond's core.1 and core.56 rule out.
 3. **All of it in `weir-capture`.** Section 9 names `weir-policy`, and a host that reads its policy at its status, outside a take, would take the capture crate for it.
 
 For where a rule's current item is found:
@@ -52,4 +52,4 @@ For where a rule's current item is found:
 - An adapter states an attendee by its address, for the attendee to join.
 - A window's close in the machine's local time names a rule's item. Two hosts in different zones may name one rule's item differently, as C.5 reads every schedule locally.
 - Checking a reader's read facts against their lists, a rule read in a reading's write, a rule's item closed with its brief, and a link are not in this record. Each is a change of its own.
-- This record bears on core.6, core.13, core.14, core.16 and core.55 to core.58, which are drawn from the statement. It adds no rule of its own. The change `weir-reads-the-policy-in-a-captures-write` builds it.
+- This record bears on core.6, core.13, core.14, core.16, core.56 to core.58 and core.60, which are drawn from the statement. It adds no rule of its own. The change `weir-reads-the-policy-in-a-captures-write` builds it.

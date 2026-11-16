@@ -103,11 +103,11 @@ archiving drops none.
   `take` hands it, and the zone only as `with_policy`'s.
 - core.2: `weir-policy/tests/names.rs` passes; the people and the rules
   are C.9's example, kept once as `crates/weir-policy/tests/c9.toml`.
-- core.55: no crate but `weir-policy` reads a `rules`, `person`, `org`
+- core.56: no crate but `weir-policy` reads a `rules`, `person`, `org`
   or `about` table.
-- core.57: a match reads `Facts` and an age alone; no code of
+- core.58: a match reads `Facts` and an age alone; no code of
   `weir-policy` reads an excerpt, an assertion or raw material.
-- core.58: a rule's move is formed in `take` and written by
+- core.60: a rule's move is formed in `take` and written by
   `InboxAt::take` in the capture's write, in no batch, its item found at
   the tip the write lands on.
 - `weir conform`'s seam gives a host no policy (C.7): neither the `weir`

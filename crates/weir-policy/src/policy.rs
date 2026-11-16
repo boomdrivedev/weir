@@ -188,7 +188,7 @@ impl Match {
     /// `is`, `in` or `contains`; `contains` evens the case of both texts;
     /// `older` holds when the age is past its span, strictly; an `all` of
     /// none holds and an `any` of none does not (record 0011). It reads
-    /// nothing but its arguments (core.57).
+    /// nothing but its arguments (core.58).
     pub fn holds(&self, facts: &Facts, age: Option<SignedDuration>) -> bool {
         match self {
             Match::All(matches) => matches.iter().all(|one| one.holds(facts, age)),

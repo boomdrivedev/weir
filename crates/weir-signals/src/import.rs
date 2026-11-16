@@ -232,7 +232,7 @@ impl InboxAt {
                 taken_at: imported_at.clone(),
                 unread: signals.is_empty(),
                 // An import states no fact: no rule reads an imported
-                // capture (126; core.58).
+                // capture (126; core.60).
                 facts: Facts::new(),
             };
             write.put(Place::Capture(key.clone()).path(), capture.to_rec());

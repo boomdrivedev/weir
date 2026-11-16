@@ -79,12 +79,12 @@ pub struct Taken {
     pub own_signal: Option<OwnSignal>,
     /// The move of the first rule whose match held, written in the
     /// capture's write, none where the take was given no policy or no rule
-    /// matched (126, 128; core.58).
+    /// matched (126, 128; core.60).
     pub rule_move: Option<RuleMove>,
 }
 
 /// A rule's move of its capture's own signal, `<key>#1`, by
-/// `rule:<rule>`, in no batch (128; core.58).
+/// `rule:<rule>`, in no batch (128; core.60).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RuleMove {
     /// The rule's name.
@@ -214,7 +214,7 @@ impl Take {
 
     /// The take, given its keeper's policy, the people list and the
     /// machine's time zone, reads the policy in each capture's write (126;
-    /// core.58). A take given none reads no rule.
+    /// core.60). A take given none reads no rule.
     pub fn with_policy(self, policy: Policy, people: People, zone: TimeZone) -> Take {
         Take {
             keeper: Some(Keeper {
@@ -567,7 +567,7 @@ pub fn take<L: AsRef<str>>(
 /// given a policy reads it at the taken-at time, for an own excerpt's
 /// signal or, where there is none, for the capture as it lands; a capture
 /// a rule matches as it lands is its own signal, and the rule's move is
-/// handed over in the same write (125 to 128; core.13, core.58). When the
+/// handed over in the same write (125 to 128; core.13, core.60). When the
 /// inbox refuses the write, what was banked for it is discarded (18).
 fn take_offer(
     offer: Offer,

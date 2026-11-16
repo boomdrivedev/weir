@@ -1,6 +1,6 @@
 //! A take given a policy reads it in the capture's write, held to the
 //! scenarios of capture-take, through the fakes of a host's inbox and bank
-//! (125 to 128; C.1 step 5, C.9; core.13, core.14, core.16, core.58).
+//! (125 to 128; C.1 step 5, C.9; core.13, core.14, core.16, core.60).
 
 mod fakes;
 

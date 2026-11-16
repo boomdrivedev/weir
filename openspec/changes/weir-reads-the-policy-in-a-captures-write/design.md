@@ -33,7 +33,7 @@ page whose area the change touches:
   the time zone are its caller's.
 - core.2: no source or test names a tool of the family. The fixtures
   are C.9's people and rules.
-- core.4 and core.58: no move is chosen but the first matching rule's.
+- core.4 and core.60: no move is chosen but the first matching rule's.
 - core.6: an offer's `facts` is read, each fact spelled as C.9 spells
   it, and a field the contract does not name is still ignored.
 - core.8: a capture's age reads its event time.
@@ -53,7 +53,7 @@ page whose area the change touches:
 - core.33: a rule's window is a schedule `weir-cadence` reads.
 - core.39 and core.40: `weir-policy` is a moon project of its own, with
   its four checks.
-- core.55 to core.57: one reader of the facts, the people list and the
+- core.56 to core.58: one reader of the facts, the people list and the
   policy, reading facts alone.
 
 The design departs from no rule.
@@ -244,7 +244,7 @@ read facts where there are some, and `People::join` of them all.
   and those joined from them (125).
 
 The age is `now` less the event time. Neither reading reads a clock or
-changes anything (core.1, core.57).
+changes anything (core.1, core.58).
 
 ### 9. A rule's item's name
 

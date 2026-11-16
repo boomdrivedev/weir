@@ -35,7 +35,7 @@ capture and its own excerpt's signal alone.
 
 Record 0011, proposed on this branch, is this change's own choice of
 where the code lies, where a rule's item is found, and what C.9 leaves
-open. core.55 to core.58 and the amended core.4, core.6, core.13,
+open. core.56 to core.58, core.60 and the amended core.4, core.6, core.13,
 core.14, core.16, core.20 and core.33 say it as rules, on this branch.
 
 ## What Changes

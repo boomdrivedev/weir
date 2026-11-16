@@ -224,7 +224,7 @@ impl InboxAt {
     /// `capture.rec` and, with its own signal, a `signals.rec` holding
     /// `<key>#1`, and with a rule's move, the move appended to `moves.rec`
     /// and the item it makes, in one write (19, 126 to 128; core.13,
-    /// core.58); refused when the key is held, writing nothing (14).
+    /// core.60); refused when the key is held, writing nothing (14).
     pub fn take(&self, taken: &Taken) -> Result<Write, Refused> {
         let capture = &taken.capture;
         let key = &capture.key;
