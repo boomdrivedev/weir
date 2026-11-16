@@ -1,0 +1,19 @@
+# Any stage may hibernate: a conversation that waits, and a stage
+# delivering tasks that repeats per task group, each declaring
+# `hibernate = true`, judged against no other field of the stage (53, 58;
+# core.32).
+[kinds.talk]
+
+[[kinds.talk.stages]]
+name = "draft"
+prompt = "prompts/talk-draft.md"
+conversation = true
+wait = true
+hibernate = true
+
+[[kinds.talk.stages]]
+name = "build"
+prompt = "prompts/talk-build.md"
+deliverables = ["tasks"]
+repeat = "per-task-group"
+hibernate = true

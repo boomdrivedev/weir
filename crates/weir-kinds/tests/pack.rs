@@ -1,7 +1,7 @@
 //! The pack's kinds cases, `pack/kinds/<case>/case.toml`, each of one
 //! form: a declaration and the kinds it reads into, each with its landing
-//! fix and its bound where it names them, and each stage with its end and its
-//! repeat; a package held at an identity, laid out in two
+//! fix and its bound where it names them, and each stage with its end, its
+//! repeat and its hibernate; a package held at an identity, laid out in two
 //! folders, and the kind, identity and content hash it reads into, checked
 //! against a lock where the case names one; or a lock and the identities
 //! and hashes it records; or each field refused. Read against the crate,
@@ -139,6 +139,9 @@ struct ExpectStage {
     end: String,
     /// How it repeats as the format spells it; left out when it does not.
     repeat: Option<String>,
+    /// Whether it hibernates, as written; left out where the case's stage
+    /// leaves it out (53, C.4 as amended at blueprints 30dce35).
+    hibernate: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -548,7 +551,7 @@ fn lock_differences(name: &str, text: &str, expect: &ExpectLock) -> Vec<String> 
 fn kind_differences(name: &str, kind: &Kind, expected: &ExpectKind) -> Vec<String> {
     let mut said = Vec::new();
     let kind_name = &kind.name;
-    let stages: Vec<(String, String, Option<String>)> = kind
+    let stages: Vec<(String, String, Option<String>, Option<bool>)> = kind
         .stages
         .iter()
         .map(|stage| {
@@ -556,13 +559,21 @@ fn kind_differences(name: &str, kind: &Kind, expected: &ExpectKind) -> Vec<Strin
                 stage.name.clone(),
                 spelled(&stage.end),
                 stage.repeat.map(|repeat| repeat.to_string()),
+                stage.hibernate,
             )
         })
         .collect();
-    let expected_stages: Vec<(String, String, Option<String>)> = expected
+    let expected_stages: Vec<(String, String, Option<String>, Option<bool>)> = expected
         .stages
         .iter()
-        .map(|stage| (stage.name.clone(), stage.end.clone(), stage.repeat.clone()))
+        .map(|stage| {
+            (
+                stage.name.clone(),
+                stage.end.clone(),
+                stage.repeat.clone(),
+                stage.hibernate,
+            )
+        })
         .collect();
     if kind.version != expected.version || stages != expected_stages {
         said.push(format!(
@@ -956,6 +967,33 @@ landing_fix = "acme/fix@1"
     );
 }
 
+#[test]
+fn a_case_whose_stage_differs_in_its_hibernate_is_named() {
+    // A stage's hibernate is held against the stage read, a stage the case
+    // expects with it left out being one read with it left out (53, C.4 as
+    // amended at blueprints 30dce35; C.7).
+    let text = r#"
+satisfies = [53]
+declaration = """
+[[kinds.talk.stages]]
+name = "draft"
+prompt = "prompts/talk-draft.md"
+conversation = true
+"""
+
+[expect.kinds.talk]
+version = 1
+stages = [{ name = "draft", end = "conversation", hibernate = true }]
+"#;
+    let case = read_case("wrong-hibernate", text).unwrap();
+    assert_eq!(
+        differences("wrong-hibernate", &case),
+        [
+            r#"wrong-hibernate: reads talk@1 with [("draft", "conversation", None, None)], and the case expects talk@1 with [("draft", "conversation", None, Some(true))]"#,
+        ]
+    );
+}
+
 /// A kind that lands with no stages names its landing fix and its bound,
 /// read with both as a declaration and as a package, and a kind with
 /// stages naming both is refused naming each (52, 57 and 89 as amended at
@@ -1084,4 +1122,34 @@ fn a_landing_fix_that_is_no_identity_is_a_case_of_its_own() {
         "{name}"
     );
     assert_eq!(differences(name, &bare), Vec::<String>::new());
+}
+
+/// A stage that hibernates, one that does not and one that leaves it out,
+/// a case of its own (53, 58; C.4 as amended at blueprints 30dce35; C.7).
+#[test]
+fn a_stage_that_hibernates_is_a_case_of_its_own() {
+    let name = "a-stage-that-hibernates";
+    let hibernates = case(name);
+    let cites: Vec<i64> = hibernates
+        .satisfies
+        .iter()
+        .filter_map(toml::Value::as_integer)
+        .collect();
+    assert_eq!(cites, [53, 58]);
+    let kinds = declaration_expect(&hibernates).kinds.as_ref().unwrap();
+    let expected: Vec<_> = kinds["talk"]
+        .stages
+        .iter()
+        .map(|stage| (stage.name.as_str(), stage.hibernate))
+        .collect();
+    assert_eq!(
+        expected,
+        [
+            ("draft", Some(true)),
+            ("code", Some(false)),
+            ("review", None)
+        ],
+        "{name}"
+    );
+    assert_eq!(differences(name, &hibernates), Vec::<String>::new());
 }

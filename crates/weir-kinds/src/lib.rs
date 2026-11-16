@@ -4,12 +4,14 @@
 //!
 //! A declaration is TOML. [`read_kinds`] is `read-kinds` (81): given a
 //! declaration's text, it returns every kind under its `kinds` table, each
-//! with its stages, whether each repeats, its agents' settings and the sections the format does
-//! not name, and apart from them the settings given to kinds the
-//! declaration does not declare, or refuses the declaration whole, naming
-//! every field that fails it (52, 57, C.4). A kind's stages are one or
-//! more, or none where it lands, declared as `stages = []` (51, 57). A kind
-//! that lands with no stages may name its landing fix, the kind a place
+//! with its stages, whether each repeats and whether each hibernates, its
+//! agents' settings and the sections the format does not name, and apart
+//! from them the settings given to kinds the declaration does not declare,
+//! or refuses the declaration whole, naming every field that fails it (52,
+//! 53, 57, C.4). What a stage's hibernating means is the caller's (58;
+//! core.32). A kind's stages are one or more, or none where it lands,
+//! declared as `stages = []` (51, 57). A kind that lands with no stages
+//! may name its landing fix, the kind a place
 //! runs when the merge queue sends its branch back, by that kind's identity
 //! with its version returned as written, and how many landing fixes it
 //! runs; which kind that identity resolves to is the caller's (52, 58, C.4;

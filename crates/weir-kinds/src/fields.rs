@@ -22,16 +22,23 @@ pub(crate) fn field(at: &str, name: &str) -> String {
     format!("{at}.{}", key(name))
 }
 
-/// A flag: false when left out, refused when not a boolean.
-pub(crate) fn boolean(table: &Table, name: &str, at: &str, problems: &mut Problems) -> bool {
-    match table.get(name) {
-        None => false,
-        Some(Value::Boolean(flag)) => *flag,
-        Some(_) => {
+/// A flag that may be left out: `None` when left out, the boolean when it
+/// is one, and otherwise `None` with the field refused, so that every flag
+/// is refused in one place and in the same words (57).
+pub(crate) fn flag(table: &Table, name: &str, at: &str, problems: &mut Problems) -> Option<bool> {
+    match table.get(name)? {
+        Value::Boolean(flag) => Some(*flag),
+        _ => {
             problems.refuse(&field(at, name), "must be true or false");
-            false
+            None
         }
     }
+}
+
+/// A flag the format gives a default: [`flag`], false when left out or
+/// refused.
+pub(crate) fn boolean(table: &Table, name: &str, at: &str, problems: &mut Problems) -> bool {
+    flag(table, name, at, problems).unwrap_or(false)
 }
 
 /// A list of strings: empty when left out, refused when not an array of
