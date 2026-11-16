@@ -557,19 +557,35 @@ fn a_paraphrase() {
             &[transcript()],
         )
         .unwrap_err();
+    assert_eq!(refused.0.len(), 1);
     assert_eq!(refused.0[0].what, "meeting/file/ab12#1");
     assert_eq!(refused.0[0].field.as_deref(), Some("excerpt"));
-    // With no raw file handed in, no excerpt stands.
-    assert!(inbox
+}
+
+#[test]
+fn a_capture_with_nothing_banked() {
+    let inbox = with_meeting();
+    let key = key("meeting/file/ab12");
+    let refused = inbox
         .read_capture(
-            &key("meeting/file/ab12"),
+            &key,
             &[read_signal(
                 "we pin mise until it is fixed.",
-                "transcript.txt:2"
+                "transcript.txt:2",
             )],
             &[],
         )
-        .is_err());
+        .unwrap_err();
+    assert_eq!(refused.0.len(), 1);
+    assert_eq!(refused.0[0].what, "meeting/file/ab12#1");
+    assert_eq!(refused.0[0].field.as_deref(), Some("position"));
+    assert!(
+        refused.0[0].why.contains("none of the capture's raw files"),
+        "{refused}"
+    );
+    // A reading of none is taken for it.
+    let inbox = after(&inbox, &inbox.read_capture(&key, &[], &[]).unwrap());
+    assert_eq!(inbox.signals(&key), Some(&[][..]));
 }
 
 #[test]
@@ -592,5 +608,23 @@ fn verbatim_across_lines() {
     assert_eq!(
         inbox.signal(&id("meeting/file/ab12#1")).unwrap().excerpt,
         two_lines
+    );
+}
+
+#[test]
+fn words_from_within_a_line() {
+    let inbox = with_meeting();
+    let words = "we pin mise until it is fixed.";
+    let write = inbox
+        .read_capture(
+            &key("meeting/file/ab12"),
+            &[read_signal(words, "transcript.txt:2")],
+            &[transcript()],
+        )
+        .unwrap();
+    let inbox = after(&inbox, &write);
+    assert_eq!(
+        inbox.signal(&id("meeting/file/ab12#1")).unwrap().excerpt,
+        words
     );
 }

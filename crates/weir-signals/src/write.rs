@@ -17,6 +17,7 @@ use crate::item::{Item, MadeBy, Outcome, SendRecord};
 use crate::layout::{check_name, Place};
 use crate::moves::{check_time, Decision, Move, NewMove, Proposal};
 use crate::signal::{signals_rec, ReadSignal, Signal, SignalId};
+use crate::stands::stands;
 
 /// The full new text of each file a write adds or replaces, by path from
 /// the tip's root: an append is the tip's text with records added after it
@@ -288,10 +289,12 @@ impl InboxAt {
     /// or, for a reading of none, the one line that marks the capture read
     /// (28). Refused when the capture is not held, or has its own signal or
     /// a reading already (28; core.17); refused whole, naming each signal
-    /// not taken and why, when any lacks a field, names a nature not of the
-    /// five (25) or has an excerpt whose bytes stand in none of the
-    /// capture's raw files the caller hands in, read from its bank (26;
-    /// core.16).
+    /// not taken and why, when any lacks a field or names a nature not of
+    /// the five (25), when its position names, as `<path>:<line>`, no raw
+    /// file the caller hands in, read from the capture's bank, and line of
+    /// it, naming `position`, or when its excerpt does not stand there as
+    /// one unbroken run of that file's text beginning on that line, line
+    /// endings evened, naming `excerpt` (26; core.16; record 0010).
     pub fn read_capture(
         &self,
         key: &Key,
@@ -319,14 +322,10 @@ impl InboxAt {
                         .into_iter()
                         .map(|(field, why)| NotTaken::field(&id, field, why)),
                 ),
-                Ok(signal) if !stands_in(signal.excerpt.as_bytes(), raw) => {
-                    not_taken.push(NotTaken::field(
-                        &id,
-                        "excerpt",
-                        "stands in none of the capture's raw files, byte for byte",
-                    ))
-                }
-                Ok(signal) => taken.push(signal),
+                Ok(signal) => match stands(&signal.excerpt, &signal.position, raw) {
+                    Ok(()) => taken.push(signal),
+                    Err((field, why)) => not_taken.push(NotTaken::field(&id, field, why)),
+                },
             }
         }
         if !not_taken.is_empty() {
@@ -704,17 +703,6 @@ impl InboxAt {
         self.check(&write)?;
         Ok(write)
     }
-}
-
-/// Whether `excerpt` stands, byte for byte, in one of `raw` (26). An empty
-/// excerpt stands nowhere: it is a field lacking.
-fn stands_in(excerpt: &[u8], raw: &[RawFile]) -> bool {
-    !excerpt.is_empty()
-        && raw.iter().any(|file| {
-            file.bytes
-                .windows(excerpt.len())
-                .any(|window| window == excerpt)
-        })
 }
 
 /// The send of `sends` to `target` at `sent_at`, with what became of it
