@@ -1,7 +1,8 @@
 //! The pack's kinds cases, `pack/kinds/<case>/case.toml`, each of one
 //! form: a declaration and the kinds it reads into, each with its landing
 //! fix and its bound where it names them, and each stage with its end and its
-//! repeat; a package held at an identity, laid out in two
+//! repeat, and the statechart kinds it reads into, each with its title, its
+//! regions and states and its states' parameters (94; C.4); a package held at an identity, laid out in two
 //! folders, and the kind, identity and content hash it reads into, checked
 //! against a lock where the case names one; or a lock and the identities
 //! and hashes it records; or each field refused. Read against the crate,
@@ -17,9 +18,10 @@ use std::path::{Path, PathBuf};
 
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use weir_kinds::weir_engine::Region;
 use weir_kinds::{
     read_elaboration, read_kinds, read_lock, read_package_dir, ContentHash, Declaration, End,
-    Identity, Kind, Package, Problem,
+    Identity, Kind, Package, ParamAgents, Params, Problem, StatechartKind,
 };
 
 /// A case as its `case.toml` writes it: a field the format does not name
@@ -70,13 +72,15 @@ struct PackageCase {
     lock: Option<String>,
 }
 
-/// What the declaration reads into: its kinds, the names of the kinds it
-/// gives settings to and declares not, and the sections beside them
-/// returned unread, or each field refused.
+/// What the declaration reads into: its simple kinds and its statechart
+/// kinds, either left out where it reads none of them, the names of the
+/// kinds it gives settings to and declares not, and the sections beside
+/// them returned unread, or each field refused.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Expect {
     kinds: Option<BTreeMap<String, ExpectKind>>,
+    statecharts: Option<BTreeMap<String, ExpectStatechart>>,
     #[serde(default)]
     settings: Vec<String>,
     #[serde(default)]
@@ -141,6 +145,90 @@ struct ExpectStage {
     repeat: Option<String>,
 }
 
+/// A statechart kind as its case writes it (94; C.4).
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectStatechart {
+    version: u64,
+    title: String,
+    /// Its label; left out where the kind names none.
+    label: Option<String>,
+    /// Its landing fix, the identity as spelled; left out where the kind
+    /// names none (94; record 0005).
+    landing_fix: Option<String>,
+    /// How many landing fixes it runs; left out where the kind names none
+    /// (94; record 0005).
+    max_landing_fixes: Option<u64>,
+    /// The kind's sections the format does not name, returned unread.
+    #[serde(default)]
+    unread: Vec<String>,
+    /// Its regions, every one by name.
+    regions: BTreeMap<String, ExpectRegion>,
+    /// The stage template's parameters of each state that gives `params`,
+    /// by the state's path; none when left out.
+    #[serde(default)]
+    params: BTreeMap<String, ExpectParams>,
+}
+
+/// A region as its case writes it: its initial state and every state.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectRegion {
+    initial: String,
+    states: BTreeMap<String, ExpectState>,
+}
+
+/// A state as its case writes it: whether it is final, false when left
+/// out; what it runs, where it runs something; each transition's target in
+/// order, none when left out; its decision's answers, none when left out;
+/// and its own regions, none when left out.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectState {
+    #[serde(default, rename = "final")]
+    is_final: bool,
+    machine: Option<String>,
+    #[serde(default)]
+    to: Vec<String>,
+    #[serde(default)]
+    answers: Vec<String>,
+    #[serde(default)]
+    regions: BTreeMap<String, ExpectRegion>,
+}
+
+/// A state's stage-template parameters as its case writes them, each left
+/// out where the state gives none: its agents spelled `entries <n>` or
+/// `rule <rule>`, its join, send-back and bound, and its deliverables as
+/// the format spells them.
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectParams {
+    agents: Option<String>,
+    join: Option<String>,
+    on_fail: Option<String>,
+    max_send_backs: Option<u64>,
+    deliverables: Option<Vec<String>>,
+}
+
+impl ExpectParams {
+    /// The parameters read, spelled as a case writes them.
+    fn spelling(params: &Params) -> Self {
+        Self {
+            agents: params.agents.as_ref().map(|agents| match agents {
+                ParamAgents::Entries(entries) => format!("entries {}", entries.len()),
+                ParamAgents::Rule { rule, .. } => format!("rule {rule}"),
+            }),
+            join: params.join.map(|join| join.to_string()),
+            on_fail: params.on_fail.clone(),
+            max_send_backs: params.max_send_backs,
+            deliverables: params
+                .deliverables
+                .as_ref()
+                .map(|all| all.iter().map(ToString::to_string).collect()),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ExpectRefusal {
@@ -167,7 +255,8 @@ fn read_case(name: &str, text: &str) -> Result<Case, String> {
     let form = match (written.declaration, written.package, written.lock) {
         (Some(text), None, None) => {
             let expect: Expect = expected(name, written.expect)?;
-            if expect.kinds.is_some() == expect.refused.is_some() {
+            let reads = expect.kinds.is_some() || expect.statecharts.is_some();
+            if reads == expect.refused.is_some() {
                 return Err(format!(
                     "{name}: `expect` names its kinds or what is refused, exactly one of them"
                 ));
@@ -325,12 +414,17 @@ fn declaration_differences(name: &str, text: &str, expect: &Expect) -> Vec<Strin
         (
             Ok(declaration),
             Expect {
-                kinds: Some(kinds),
+                kinds,
+                statecharts,
                 settings,
                 unread,
-                ..
+                refused: None,
             },
         ) => {
+            let no_kinds = BTreeMap::new();
+            let kinds = kinds.as_ref().unwrap_or(&no_kinds);
+            let no_statecharts = BTreeMap::new();
+            let statecharts = statecharts.as_ref().unwrap_or(&no_statecharts);
             let mut said = Vec::new();
             let given: Vec<&String> = declaration.settings.keys().collect();
             if given != settings.iter().collect::<Vec<_>>() {
@@ -356,6 +450,19 @@ fn declaration_differences(name: &str, text: &str, expect: &Expect) -> Vec<Strin
                     said.extend(kind_differences(name, kind, expected));
                 }
             }
+            let read_names: BTreeSet<&String> = declaration.statecharts.keys().collect();
+            let expected_names: BTreeSet<&String> = statecharts.keys().collect();
+            if read_names != expected_names {
+                said.push(format!(
+                    "{name}: reads the statechart kinds {read_names:?}, and the case expects \
+                     {expected_names:?}"
+                ));
+            }
+            for (kind_name, expected) in statecharts {
+                if let Some(kind) = declaration.statecharts.get(kind_name) {
+                    said.extend(statechart_differences(name, kind, expected));
+                }
+            }
             said
         }
         (
@@ -367,7 +474,11 @@ fn declaration_differences(name: &str, text: &str, expect: &Expect) -> Vec<Strin
         ) => refusal_differences(name, &problems, refused),
         (Ok(declaration), _) => vec![format!(
             "{name}: reads the kinds {:?}, and the case expects a refusal",
-            declaration.kinds.keys().collect::<Vec<_>>()
+            declaration
+                .kinds
+                .keys()
+                .chain(declaration.statecharts.keys())
+                .collect::<Vec<_>>()
         )],
         (Err(problems), _) => vec![format!(
             "{name}: refuses {:?}, and the case expects its kinds",
@@ -592,6 +703,167 @@ fn kind_differences(name: &str, kind: &Kind, expected: &ExpectKind) -> Vec<Strin
         ));
     }
     said
+}
+
+/// How a statechart kind read differs from the statechart kind its case
+/// writes, each difference naming the case, the kind and the field (94;
+/// C.4).
+fn statechart_differences(
+    name: &str,
+    kind: &StatechartKind,
+    expected: &ExpectStatechart,
+) -> Vec<String> {
+    let mut said = Vec::new();
+    let kind_name = kind.name();
+    let mut differs = |field: &str, read: String, expects: String| {
+        if read != expects {
+            said.push(format!(
+                "{name}: reads {kind_name} with {field} {read}, and the case expects {expects}"
+            ));
+        }
+    };
+    differs(
+        "version",
+        kind.version().to_string(),
+        expected.version.to_string(),
+    );
+    differs(
+        "title",
+        format!("{:?}", kind.title),
+        format!("{:?}", expected.title),
+    );
+    differs(
+        "label",
+        format!("{:?}", kind.label),
+        format!("{:?}", expected.label),
+    );
+    differs(
+        "landing_fix",
+        format!("{:?}", kind.landing_fix.as_ref().map(ToString::to_string)),
+        format!("{:?}", expected.landing_fix),
+    );
+    differs(
+        "max_landing_fixes",
+        format!("{:?}", kind.max_landing_fixes),
+        format!("{:?}", expected.max_landing_fixes),
+    );
+    differs(
+        "unread",
+        format!("{:?}", kind.sections.keys().collect::<Vec<_>>()),
+        format!("{:?}", expected.unread),
+    );
+    regions_differences(
+        "regions",
+        &kind.statechart.regions,
+        &expected.regions,
+        &mut differs,
+    );
+    differs(
+        "params",
+        format!("{:?}", kind.params.keys().collect::<Vec<_>>()),
+        format!("{:?}", expected.params.keys().collect::<Vec<_>>()),
+    );
+    for (path, expects) in &expected.params {
+        if let Some(read) = kind.params.get(path) {
+            let read = ExpectParams::spelling(read);
+            let at = format!("params.{path:?}");
+            differs(
+                &format!("{at}.agents"),
+                format!("{:?}", read.agents),
+                format!("{:?}", expects.agents),
+            );
+            differs(
+                &format!("{at}.join"),
+                format!("{:?}", read.join),
+                format!("{:?}", expects.join),
+            );
+            differs(
+                &format!("{at}.on_fail"),
+                format!("{:?}", read.on_fail),
+                format!("{:?}", expects.on_fail),
+            );
+            differs(
+                &format!("{at}.max_send_backs"),
+                format!("{:?}", read.max_send_backs),
+                format!("{:?}", expects.max_send_backs),
+            );
+            differs(
+                &format!("{at}.deliverables"),
+                format!("{:?}", read.deliverables),
+                format!("{:?}", expects.deliverables),
+            );
+        }
+    }
+    said
+}
+
+/// How regions read at `at` differ from the regions a case writes, each
+/// difference given to `differs` with its field.
+fn regions_differences(
+    at: &str,
+    read: &BTreeMap<String, Region>,
+    expected: &BTreeMap<String, ExpectRegion>,
+    differs: &mut impl FnMut(&str, String, String),
+) {
+    differs(
+        at,
+        format!("{:?}", read.keys().collect::<Vec<_>>()),
+        format!("{:?}", expected.keys().collect::<Vec<_>>()),
+    );
+    for (name, expects) in expected {
+        let Some(region) = read.get(name) else {
+            continue;
+        };
+        let at = format!("{at}.{name}");
+        differs(
+            &format!("{at}.initial"),
+            format!("{:?}", region.initial),
+            format!("{:?}", expects.initial),
+        );
+        differs(
+            &format!("{at}.states"),
+            format!("{:?}", region.states.keys().collect::<Vec<_>>()),
+            format!("{:?}", expects.states.keys().collect::<Vec<_>>()),
+        );
+        for (state_name, expects) in &expects.states {
+            let Some(state) = region.states.get(state_name) else {
+                continue;
+            };
+            let at = format!("{at}.states.{state_name}");
+            differs(
+                &format!("{at}.final"),
+                state.is_final.to_string(),
+                expects.is_final.to_string(),
+            );
+            differs(
+                &format!("{at}.machine"),
+                format!("{:?}", state.machine),
+                format!("{:?}", expects.machine),
+            );
+            let to: Vec<&String> = state.transitions.iter().map(|t| &t.to).collect();
+            differs(
+                &format!("{at}.to"),
+                format!("{to:?}"),
+                format!("{:?}", expects.to),
+            );
+            let answers: Vec<String> = state
+                .decision
+                .as_ref()
+                .map(|decision| decision.answers.clone())
+                .unwrap_or_default();
+            differs(
+                &format!("{at}.answers"),
+                format!("{answers:?}"),
+                format!("{:?}", expects.answers),
+            );
+            regions_differences(
+                &format!("{at}.regions"),
+                &state.regions,
+                &expects.regions,
+                differs,
+            );
+        }
+    }
 }
 
 /// How the problems given differ from the refusal the case expects: each
@@ -925,6 +1197,69 @@ stages = [{ name = "review", end = "commits" }]
         said[0].starts_with("wrong-hash: hashes to `sha256:"),
         "{said:?}"
     );
+}
+
+#[test]
+fn a_case_whose_statechart_differs_is_named() {
+    // A statechart kind is held against the kind read, each difference
+    // naming the case, the kind and the field (94; C.4; C.7).
+    let text = r#"
+satisfies = [94]
+declaration = """
+[kinds.persona]
+title = "Persona test"
+
+[kinds.persona.regions.stages]
+initial = "test"
+
+[kinds.persona.regions.stages.states.test]
+machine = "stage"
+params = { join = "all" }
+transitions = [
+  { when = { final = "passed" }, to = "passed" },
+  { when = { final = "sent-back" }, to = "build" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.build]
+[kinds.persona.regions.stages.states.passed]
+final = true
+[kinds.persona.regions.stages.states.stopped]
+"""
+
+[expect.statecharts.persona]
+version = 1
+title = "Persona test"
+
+[expect.statecharts.persona.regions.stages]
+initial = "test"
+states.build = {}
+states.passed = { final = true }
+states.stopped = {}
+states.test = { machine = "stage", to = ["passed", "stopped"] }
+
+[expect.statecharts.persona.params."stages.test"]
+join = "all"
+"#;
+    let case = read_case("wrong-targets", text).unwrap();
+    assert_eq!(
+        differences("wrong-targets", &case),
+        [
+            r#"wrong-targets: reads persona with regions.stages.states.test.to ["passed", "build", "stopped"], and the case expects ["passed", "stopped"]"#
+        ]
+    );
+
+    let unexpected = text.replace("[expect.statecharts.persona]", "[expect.statecharts.other]");
+    let unexpected = unexpected.replace("expect.statecharts.persona.", "expect.statecharts.other.");
+    let case = read_case("unexpected", &unexpected).unwrap();
+    assert_eq!(
+        differences("unexpected", &case),
+        [r#"unexpected: reads the statechart kinds {"persona"}, and the case expects {"other"}"#]
+    );
+
+    let misspelt = text.replace("states.build = {}", "states.build = { finale = true }");
+    let refused = read_case("misspelt", &misspelt).expect_err("a refusal");
+    assert!(refused.contains("`finale`"), "{refused}");
 }
 
 #[test]
