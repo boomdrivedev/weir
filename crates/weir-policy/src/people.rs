@@ -10,6 +10,8 @@ use std::fmt;
 
 use toml::{Table, Value as Toml};
 
+use crate::fact::{Facts, Value};
+
 /// The people list (119): what a reader's `about` picks from, the persons
 /// and the orgs.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -139,6 +141,127 @@ impl People {
             orgs,
         })
     }
+}
+
+impl People {
+    /// The joined facts of a capture's stated facts and a signal's read
+    /// facts (119, 121), written in no record: each stated `attendee` that
+    /// is an address joins the person whose addresses hold it and the org
+    /// whose domains hold its domain, and each read `speaker` the person
+    /// whose names hold it and the orgs of that person's addresses. An
+    /// address or a name two persons hold joins neither, a domain two orgs
+    /// hold neither, and each is compared with its case evened (record
+    /// 0010). Values are listed in the order of the attendees or speakers
+    /// they come from.
+    pub fn join(&self, stated: &Facts, read: &Facts) -> Facts {
+        let mut joined = Facts::new();
+        for given in texts(stated, "attendee") {
+            let Some(domain) = domain(given) else {
+                continue;
+            };
+            let person = only(self.persons.iter().filter(|person| {
+                person
+                    .addresses
+                    .iter()
+                    .any(|held| even(held) == even(given))
+            }));
+            if let Some(person) = person {
+                give_person(&mut joined, "attendee", person);
+            }
+            if let Some(org) = self.org_of(domain) {
+                give_org(&mut joined, "attendee", org);
+            }
+        }
+        for given in texts(read, "speaker") {
+            let person = only(
+                self.persons
+                    .iter()
+                    .filter(|person| person.names.iter().any(|held| even(held) == even(given))),
+            );
+            let Some(person) = person else {
+                continue;
+            };
+            give_person(&mut joined, "speaker", person);
+            let mut orgs: Vec<&Org> = Vec::new();
+            for org in person
+                .addresses
+                .iter()
+                .filter_map(|address| domain(address))
+                .filter_map(|domain| self.org_of(domain))
+            {
+                if !orgs.iter().any(|held| std::ptr::eq(*held, org)) {
+                    orgs.push(org);
+                }
+            }
+            for org in orgs {
+                give_org(&mut joined, "speaker", org);
+            }
+        }
+        joined
+    }
+
+    /// The one org whose domains hold `domain`, none where none or several
+    /// do.
+    fn org_of(&self, domain: &str) -> Option<&Org> {
+        only(
+            self.orgs
+                .iter()
+                .filter(|org| org.domains.iter().any(|held| even(held) == even(domain))),
+        )
+    }
+}
+
+/// The text values of the fact `name`.
+fn texts<'a>(facts: &'a Facts, name: &str) -> impl Iterator<Item = &'a str> {
+    facts
+        .get(name)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|value| match value {
+            Value::Text(text) => Some(text.as_str()),
+            _ => None,
+        })
+}
+
+/// The domain of an address: one `@` with text on each side and no blank
+/// (record 0010).
+fn domain(address: &str) -> Option<&str> {
+    let (local, domain) = address.split_once('@')?;
+    let shaped = !local.is_empty()
+        && !domain.is_empty()
+        && !domain.contains('@')
+        && !address.chars().any(char::is_whitespace);
+    shaped.then_some(domain)
+}
+
+/// A text with its case evened, so `Dana@Acme.com` is `dana@acme.com`.
+fn even(text: &str) -> String {
+    text.to_lowercase()
+}
+
+/// The one item `found` holds, none where it holds none or several (119).
+fn only<T>(mut found: impl Iterator<Item = T>) -> Option<T> {
+    let first = found.next()?;
+    found.next().is_none().then_some(first)
+}
+
+/// A joined person's facts: `<whom>.name`, `<whom>.role` where it has one,
+/// and `<whom>.teams`, each team a value (119; C.9).
+fn give_person(joined: &mut Facts, whom: &str, person: &Person) {
+    joined.push(&format!("{whom}.name"), Value::Text(person.name.clone()));
+    if let Some(role) = &person.role {
+        joined.push(&format!("{whom}.role"), Value::Text(role.clone()));
+    }
+    for team in &person.teams {
+        joined.push(&format!("{whom}.teams"), Value::Text(team.clone()));
+    }
+}
+
+/// A joined org's facts: `<whom>.org`, its name, and `<whom>.client`
+/// (119; C.9).
+fn give_org(joined: &mut Facts, whom: &str, org: &Org) {
+    joined.push(&format!("{whom}.org"), Value::Text(org.name.clone()));
+    joined.push(&format!("{whom}.client"), Value::Bool(org.client));
 }
 
 /// The settings document `settings` is, or why it is not TOML.
