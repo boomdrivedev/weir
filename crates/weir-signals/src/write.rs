@@ -9,13 +9,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use weir_capture::rec::{self, Record};
-use weir_capture::{CameIn, Key, RawFile, Taken};
+use weir_capture::{CameIn, Key, RawFile, RuleMove, RuleOutcome, Taken};
 
 use crate::format::Format;
 use crate::inbox::{Checked, Effect, InboxAt, InboxError, NotMoved};
 use crate::item::{Item, MadeBy, Outcome, SendRecord};
 use crate::layout::{check_name, Place};
-use crate::moves::{check_time, Decision, Move, NewMove, Proposal};
+use crate::moves::{check_time, Decision, Move, NewMove, Proposal, Word};
 use crate::signal::{signals_rec, ReadSignal, Signal, SignalId};
 
 /// The full new text of each file a write adds or replaces, by path from
@@ -221,8 +221,9 @@ impl InboxAt {
 
     /// The write of a capture the capture crate's `take` hands over:
     /// `capture.rec` and, with its own signal, a `signals.rec` holding
-    /// `<key>#1`, in one write (19; core.13); refused when the key is held,
-    /// writing nothing (14).
+    /// `<key>#1`, and with a rule's move, the move appended to `moves.rec`
+    /// and the item it makes, in one write (19, 126 to 128; core.13,
+    /// core.57); refused when the key is held, writing nothing (14).
     pub fn take(&self, taken: &Taken) -> Result<Write, Refused> {
         let capture = &taken.capture;
         let key = &capture.key;
@@ -243,6 +244,26 @@ impl InboxAt {
                 ),
             )
             .into());
+        }
+        match (&taken.own_signal, &taken.rule_move) {
+            (None, Some(_)) => {
+                return Err(NotTaken::field(
+                    key,
+                    "signal",
+                    "is missing, and a rule's move moves its capture's own signal (128)",
+                )
+                .into())
+            }
+            (Some(own), None) if own.kind.is_none() => {
+                return Err(NotTaken::field(
+                    key,
+                    "signal",
+                    "has no nature and comes with no rule's move: only a rule's own signal has \
+                     none (127)",
+                )
+                .into())
+            }
+            _ => {}
         }
         let mut write = Write::new();
         write.put(Place::Capture(key.clone()).path(), capture.to_rec());
@@ -282,8 +303,79 @@ impl InboxAt {
                 }
             }
         }
-        self.check(&write)?;
+        let landed = self.check(&write)?;
+        if let Some(rule_move) = &taken.rule_move {
+            landed.rules_move(&mut write, key, &capture.taken_at, rule_move)?;
+            self.check(&write)?;
+        }
         Ok(write)
+    }
+
+    /// Adds to `write` a rule's move of `<key>#1`, formed on this inbox,
+    /// the one the capture's write leaves: by `rule:<rule>`, at the
+    /// capture's taken-at time, in no batch and replacing nothing (31, 32);
+    /// a drop's reason its target and its note; a join into the rule's
+    /// current item here, or, where it has none, into the item it makes
+    /// under the name handed, which no item of the inbox may have had (35,
+    /// 128). The move is checked as [`InboxAt::make_move`] checks one, and
+    /// a replay on a new tip forms it again there (core.26; record 0010).
+    fn rules_move(
+        &self,
+        write: &mut Write,
+        key: &Key,
+        taken_at: &str,
+        rule_move: &RuleMove,
+    ) -> Result<(), Refused> {
+        let rule = &rule_move.rule;
+        let (word, target, priority) = match &rule_move.outcome {
+            RuleOutcome::Drop { reason } => (Word::Drop, reason.clone(), None),
+            RuleOutcome::Join { priority, item } => {
+                let target = match self.rule_item(rule) {
+                    Some(current) => current.item.item.clone(),
+                    None if self.items.contains_key(item) => {
+                        return Err(NotTaken::new(
+                            item,
+                            format!(
+                                "is a name an item of the inbox has had, and `{rule}` has no \
+                                 current item for its join to go into (35, 128)"
+                            ),
+                        )
+                        .into())
+                    }
+                    None => item.clone(),
+                };
+                (Word::Join, target, Some(*priority))
+            }
+        };
+        let new = NewMove {
+            signal: SignalId::new(key.clone(), 1),
+            word: word.as_str().to_string(),
+            target,
+            note: None,
+            by: format!("rule:{rule}"),
+            at: taken_at.to_string(),
+            replaces: None,
+        };
+        let formed = new
+            .to_move(None)
+            .map_err(|(field, why)| NotTaken::field(&new.signal, field, why))?;
+        let effect = self
+            .check_move(&formed, Checked::Formed)
+            .map_err(|not| not.of(&new.signal))?;
+        let moves = Place::Moves.path();
+        write.put(&moves, self.appended(&moves, &[formed.to_record()]));
+        if effect == Effect::MakesItem {
+            let item = Item {
+                rule: Some(rule.clone()),
+                priority,
+                ..joined_item(&formed)
+            };
+            write.put(
+                Place::Item(formed.target.clone()).path(),
+                rec::write(&[item.to_record()]),
+            );
+        }
+        Ok(())
     }
 
     /// The write of a reader's reading of the capture under `key`:
