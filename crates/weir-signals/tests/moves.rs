@@ -657,7 +657,7 @@ fn an_old_unmoved_signal() {
         subjects: Vec::new(),
         argues_with: Vec::new(),
         excerpt: "we keep the old pin".into(),
-        position: "the transcript".into(),
+        position: "transcript.txt:1".into(),
     }];
     let inbox = after(
         &inbox,
