@@ -96,8 +96,8 @@ fn write_all(root: &Path, files: &[(&str, &str)]) {
 }
 
 /// A pack that passes: every counted clause cited, 60 only by a cadence
-/// case, 48 only by a branch case, 97 only by a tick case and 102 and 106
-/// only by a delivery case,
+/// case, 48 only by a branch case, 96, 97 and 98 only by a tick case and
+/// 102 and 106 only by a delivery case,
 /// `"75a"` cited, 69 cited by none and 87 by one.
 fn passing() -> Vec<(&'static str, &'static str)> {
     vec![
@@ -117,7 +117,7 @@ fn passing() -> Vec<(&'static str, &'static str)> {
         ("kinds/two-deliverables/case.toml", "satisfies = [57]\n"),
         (
             "tick/a-response-applied-once/case.toml",
-            "satisfies = [97]\n",
+            "satisfies = [96, 97, 98]\n",
         ),
         (
             "delivery/a-second-confirmation/case.toml",
@@ -198,7 +198,7 @@ fn a_tick_case_is_a_case_of_the_pack() {
     let no_clause = with(
         &passing(),
         "tick/a-response-applied-once/case.toml",
-        Some("satisfies = [97, 140]\n"),
+        Some("satisfies = [96, 97, 98, 140]\n"),
     );
     assert_eq!(
         faults(&no_clause),
@@ -321,6 +321,16 @@ fn a_clause_of_a14_cited_by_no_case() {
         Some("satisfies = [102]\n"),
     );
     assert_eq!(faults(&files), ["106: is cited by no case"]);
+}
+
+#[test]
+fn a_clause_of_a13_cited_by_no_case() {
+    let files = with(
+        &passing(),
+        "tick/a-response-applied-once/case.toml",
+        Some("satisfies = [96, 98]\n"),
+    );
+    assert_eq!(faults(&files), ["97: is cited by no case"]);
 }
 
 #[test]
