@@ -1,5 +1,6 @@
-# A signal whose excerpt stands in none of the capture's raw files is
-# refused.
+# A signal whose excerpt stands nowhere in the raw file its position
+# names, so not as one run beginning on its line, is refused naming its
+# excerpt.
 satisfies = [26]
 
 [operation.reading]
@@ -13,9 +14,9 @@ assertion = "acme 1.1 drops the shim."
 subjects = []
 argues_with = []
 excerpt = "The shim is gone for good."
-position = "the notes"
+position = "raw/notes.md:3"
 
 [[refused]]
 what = "release/acme/1.1#1"
 field = "excerpt"
-reason_holds = "stands in none of the capture's raw files"
+reason_holds = "as one run beginning on line 3"

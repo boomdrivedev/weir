@@ -1,0 +1,21 @@
+# A signal whose position names no raw file and line as `<path>:<line>`
+# is refused naming its position, though its excerpt stands in the notes.
+satisfies = [26]
+
+[operation.reading]
+key = "release/acme/1.1"
+raw = ["raw/notes.md"]
+
+[[operation.reading.signal]]
+kind = "ask"
+asserted_by = "acme"
+assertion = "acme 1.1 brings the shim back."
+subjects = []
+argues_with = []
+excerpt = "The shim is back, behind a flag."
+position = "the notes, the first item"
+
+[[refused]]
+what = "release/acme/1.1#1"
+field = "position"
+reason_holds = "names no raw file and line"
