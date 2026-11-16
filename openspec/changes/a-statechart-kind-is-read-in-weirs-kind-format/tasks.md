@@ -35,7 +35,7 @@ checks once every task is done.
 
 ## 4. weir check
 
-- [ ] 4.1 Have `weir check`'s listing give the kinds of both formats in name order, a statechart kind as design 11 says, and its doc comment say so. Add `a_statechart_kind_is_listed` to `crates/weir/tests/check.rs`, over weir-kinds' `persona.toml` (design 11; section 9). True when `devenv shell -- moon run weir:test -- --test check a_statechart_kind_is_listed` passes, holding the kinds scenario of that name.
+- [x] 4.1 Have `weir check`'s listing give the kinds of both formats in name order, a statechart kind as design 11 says, and its doc comment say so. Add `a_statechart_kind_is_listed` to `crates/weir/tests/check.rs`, over weir-kinds' `persona.toml` (design 11; section 9). True when `devenv shell -- moon run weir:test -- --test check a_statechart_kind_is_listed` passes, holding the kinds scenario of that name.
 
 ## 5. The pack
 
