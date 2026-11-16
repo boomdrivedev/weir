@@ -39,7 +39,7 @@ repository's whole checks once every task is done.
 
 ## 4. The guards
 
-- [ ] 4.1 Add `tests/guards.rs`, each guard tried through `tick` over the one-region helper: `is_and_in`, `an_evidence_read_or_not`, `values_in_order`, `a_guard_by_age`, `against_another_evidence`, `values_of_two_types`, `evidence_read_at_its_region`, `no_evidence_of_the_engines_own`, `a_sibling_region`, `the_owner_and_the_children` and `all_any_not_and_always` (design 5, 7, 8; 94, 96, 98). True when `devenv shell -- moon run engine:test -- --test guards` passes, holding the statechart-engine scenarios of those names.
+- [x] 4.1 Add `tests/guards.rs`, each guard tried through `tick` over the one-region helper: `is_and_in`, `an_evidence_read_or_not`, `values_in_order`, `a_guard_by_age`, `against_another_evidence`, `values_of_two_types`, `evidence_read_at_its_region`, `no_evidence_of_the_engines_own`, `a_sibling_region`, `the_owner_and_the_children` and `all_any_not_and_always` (design 5, 7, 8; 94, 96, 98). True when `devenv shell -- moon run engine:test -- --test guards` passes, holding the statechart-engine scenarios of those names.
 
 ## 5. Decisions, names and what the engine names
 
