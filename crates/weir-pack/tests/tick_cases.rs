@@ -3,7 +3,7 @@
 //! ticked twice and compared" and "The pack holds the tick cases" (C.7;
 //! 96 to 99; S21).
 
-use weir_pack::{read_tick_case, Pack, Shape};
+use weir_pack::{read_tick_case, run_tick_case, Pack, Shape};
 
 /// The case `tick/<name>` of a pack holding `files`, each by its path from
 /// the case's folder.
@@ -113,4 +113,55 @@ fn a_declaration_the_kind_format_refuses() {
         why.contains("kinds.lamp.regions.power.states.off.transitions[0].to"),
         "{why}"
     );
+}
+
+/// What running the case `files` hold says, or that it ran with no
+/// difference.
+fn run(name: &str, toml: &str) -> Result<(), Vec<String>> {
+    let case = read_tick_case(&case_of(name, &[("case.toml", toml)])).unwrap();
+    run_tick_case(&case)
+}
+
+#[test]
+fn a_case_whose_next_state_differs() {
+    assert_eq!(run("s21", S21), Ok(()));
+    let toml = S21.replace(
+        "next = { regions = { power = \"on\" }",
+        "next = { regions = { power = \"off\" }",
+    );
+    let said = run("differs", &toml).unwrap_err();
+    assert_eq!(
+        said,
+        ["tick/differs: next.regions.power: expected `off`, ticked `on`"]
+    );
+}
+
+#[test]
+fn a_case_whose_effects_differ() {
+    let toml = S21.replace(
+        "{ do = \"light\", region = \"power\", phase = \"entry\" },",
+        "",
+    );
+    let said = run("effects", &toml).unwrap_err();
+    assert_eq!(said.len(), 1, "{said:?}");
+    assert!(
+        said[0].starts_with("tick/effects: fired[0].effects: expected [], ticked ["),
+        "{said:?}"
+    );
+    assert!(said[0].contains("\"light\""), "{said:?}");
+}
+
+#[test]
+fn a_case_read_from_its_folder() {
+    let dir = tempfile::tempdir().unwrap();
+    let folder = dir.path().join("tick").join("the-lamp-switched-on");
+    std::fs::create_dir_all(&folder).unwrap();
+    std::fs::write(folder.join("case.toml"), S21).unwrap();
+    let pack = Pack::read(dir.path()).unwrap();
+    assert_eq!(pack.files().len(), 1, "its folder alone");
+    let cases = pack.cases(Shape::Tick);
+    assert_eq!(cases.len(), 1);
+    let case = read_tick_case(&cases[0]).unwrap_or_else(|why| panic!("{why}"));
+    assert_eq!(case.id, "tick/the-lamp-switched-on");
+    assert_eq!(run_tick_case(&case), Ok(()));
 }

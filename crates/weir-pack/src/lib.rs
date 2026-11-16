@@ -44,4 +44,4 @@ pub use host::{
     read_host_case, Expected, ExpectedRefusal, ExpectedRun, HostCase, Invocation, Offered, Step,
 };
 pub use pack::{Case, Pack, Shape};
-pub use tick::{read_tick_case, TickCase};
+pub use tick::{read_tick_case, run_tick_case, TickCase};

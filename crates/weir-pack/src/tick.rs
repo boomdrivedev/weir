@@ -10,9 +10,11 @@
 //! name (core.30, core.54). The case is ticked by weir's engine (96 to 99;
 //! core.35).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Debug;
 
 use serde::Deserialize;
+use time::format_description::well_known::Rfc3339;
 use time::{Date, Month, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 use toml::value::{Datetime, Offset};
 use toml::{Table, Value};
@@ -206,6 +208,187 @@ pub fn read_tick_case(case: &Case) -> Result<TickCase, String> {
     })
 }
 
+/// Ticks `case`'s chart twice with weir's engine, each time from copies
+/// of its templates, proofs, state and snapshot, and compares the first
+/// tick with what the case expects; or names the case and the field of
+/// each difference: a transition or an effect other than expected, a part
+/// of the next state other than expected, the two ticks unequal, an input
+/// changed by the tick, or the tick refused (65, 96, 98, 99).
+pub fn run_tick_case(case: &TickCase) -> Result<(), Vec<String>> {
+    let mut said: Vec<String> = Vec::new();
+    let mut say = |field: &str, what: String| said.push(format!("{}: {field}: {what}", case.id));
+    let tick_copies = || {
+        let (chart, templates, proofs, state, snapshot) = (
+            case.chart.clone(),
+            case.templates.clone(),
+            case.proofs.clone(),
+            case.state.clone(),
+            case.snapshot.clone(),
+        );
+        let tick = weir_engine::tick(&chart, &templates, &proofs, &state, &snapshot);
+        (tick, (chart, templates, proofs, state, snapshot))
+    };
+    let (first, inputs) = tick_copies();
+    let (second, _) = tick_copies();
+    let (chart, templates, proofs, state, snapshot) = inputs;
+    for (field, changed) in [
+        ("chart", chart != case.chart),
+        ("templates", templates != case.templates),
+        ("proofs", proofs != case.proofs),
+        ("state", state != case.state),
+        ("snapshot", snapshot != case.snapshot),
+    ] {
+        if changed {
+            say(field, "an input the tick changed".into());
+        }
+    }
+    if first != second {
+        say("tick", "the two ticks of one case are unequal".into());
+    }
+    let tick = match first {
+        Ok(tick) => tick,
+        Err(refusal) => {
+            say("tick", format!("refused: {refusal}"));
+            return Err(said);
+        }
+    };
+    let expected = &case.expected;
+    if tick.fired.len() != expected.fired.len() {
+        say(
+            "fired",
+            format!(
+                "expected {} transitions, ticked {}: {}",
+                expected.fired.len(),
+                tick.fired.len(),
+                moves(&tick.fired)
+            ),
+        );
+    }
+    for (n, (fired, wanted)) in tick.fired.iter().zip(&expected.fired).enumerate() {
+        let at = |part: &str| format!("fired[{n}].{part}");
+        let mut part = |name: &str, ticked: String, wanted: String| {
+            if ticked != wanted {
+                say(&at(name), format!("expected {wanted}, ticked {ticked}"));
+            }
+        };
+        part("region", fired.region.clone(), wanted.region.clone());
+        part("from", fired.from.clone(), wanted.from.clone());
+        part("to", fired.to.clone(), wanted.to.clone());
+        part(
+            "bump",
+            format!("{:?}", fired.bump),
+            format!("{:?}", wanted.bump),
+        );
+        part(
+            "response",
+            format!(
+                "{:?}",
+                fired.response.as_ref().map(|r| (&r.id, &r.argument))
+            ),
+            format!(
+                "{:?}",
+                wanted.response.as_ref().map(|r| (&r.id, &r.argument))
+            ),
+        );
+        part("effects", effects(&fired.effects), effects(&wanted.effects));
+    }
+    let next = &tick.next;
+    let wanted = &expected.next;
+    differ(
+        &mut say,
+        "next.regions",
+        &next.regions,
+        &wanted.regions,
+        |held| format!("`{held}`"),
+    );
+    differ(
+        &mut say,
+        "next.entered_at",
+        &next.entered_at,
+        &wanted.entered_at,
+        |time| time.format(&Rfc3339).unwrap_or_else(|_| time.to_string()),
+    );
+    differ(
+        &mut say,
+        "next.counters",
+        &next.counters,
+        &wanted.counters,
+        |n| n.to_string(),
+    );
+    if next.applied != wanted.applied {
+        say(
+            "next.applied",
+            format!("expected {:?}, ticked {:?}", wanted.applied, next.applied),
+        );
+    }
+    differ(
+        &mut say,
+        "next.set_aside",
+        &next.set_aside,
+        &wanted.set_aside,
+        |instance| format!("{instance:?}"),
+    );
+    if said.is_empty() {
+        Ok(())
+    } else {
+        Err(said)
+    }
+}
+
+/// Each key of two maps whose values differ, named under `field`.
+fn differ<V: PartialEq + Debug>(
+    say: &mut impl FnMut(&str, String),
+    field: &str,
+    ticked: &BTreeMap<String, V>,
+    wanted: &BTreeMap<String, V>,
+    show: impl Fn(&V) -> String,
+) {
+    let keys: BTreeSet<&String> = ticked.keys().chain(wanted.keys()).collect();
+    for key in keys {
+        let (ticked, wanted) = (ticked.get(key), wanted.get(key));
+        if ticked != wanted {
+            let show = |value: Option<&V>| value.map(&show).unwrap_or_else(|| "none".into());
+            say(
+                &format!("{field}.{key}"),
+                format!("expected {}, ticked {}", show(wanted), show(ticked)),
+            );
+        }
+    }
+}
+
+/// The transitions fired, each `<region>: <from> to <to>`.
+fn moves(fired: &[Fired]) -> String {
+    let each: Vec<String> = fired
+        .iter()
+        .map(|fired| format!("{}: {} to {}", fired.region, fired.from, fired.to))
+        .collect();
+    format!("[{}]", each.join(", "))
+}
+
+/// Effects planned, as a case writes them.
+fn effects(effects: &[Planned]) -> String {
+    let each: Vec<String> = effects
+        .iter()
+        .map(|effect| {
+            let mut written = format!(
+                "{{ do = {:?}, region = {:?}, phase = {:?}",
+                effect.atom,
+                effect.region,
+                spelled(effect.phase)
+            );
+            if !effect.args.is_empty() {
+                written.push_str(&format!(
+                    ", args = {{ {} }}",
+                    effect.args.to_string().trim().replace('\n', ", ")
+                ));
+            }
+            written.push_str(" }");
+            written
+        })
+        .collect();
+    format!("[{}]", each.join(", "))
+}
+
 /// An object's state as a case writes it, at `at`.
 fn object_state(written: WrittenState, at: &str) -> Result<ObjectState, String> {
     let entered_at = written
@@ -294,7 +477,7 @@ fn phase(text: &str, at: &str) -> Result<Phase, String> {
 }
 
 /// A phase as a case spells it.
-pub(crate) fn spelled(phase: Phase) -> &'static str {
+fn spelled(phase: Phase) -> &'static str {
     match phase {
         Phase::Exit => "exit",
         Phase::Transition => "transition",
