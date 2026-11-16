@@ -2,9 +2,11 @@
 
 The change a-statechart-kind-is-read-in-weirs-kind-format, on
 `change/a-statechart-kind-is-read-in-weirs-kind-format` at 64c5215,
-holds: the whole checks pass, every task is ticked, and every
-requirement and scenario of its four delta specs is met by the code and
-a test of the scenario's name.
+falls short, and is not archived: the whole checks pass, every task is
+ticked, and every requirement and scenario of its four delta specs is
+met by the code and a test of the scenario's name, but its two modified
+requirements, merged into `openspec/specs/` as `openspec archive` writes
+them, fail `root:specs` (see Findings).
 
 ## The whole checks
 
@@ -102,4 +104,23 @@ The modified requirement keeps its one scenario.
 
 ## Findings
 
-None.
+- The archive would fail the gate. `openspec archive` applied the
+  deltas cleanly (+29, ~2, -0), and `openspec validate --specs
+  --strict`, `root:specs`'s command, then failed 2 of 28 specs, each
+  for a warning strict mode refuses, "Requirement text is very long
+  (>500 characters)":
+  - `kinds`, "weir check reads a declaration": 608 characters as this
+    change's delta modifies it, under 500 in the main spec now.
+  - `conformance-pack`, "The pack keeps an index of the statement's
+    clauses": 537 characters as this change's delta modifies it, under
+    500 in the main spec now.
+
+  The whole checks above pass because `root:specs` reads
+  `openspec/specs/` alone, and the change itself is valid under
+  `openspec validate a-statechart-kind-is-read-in-weirs-kind-format
+  --strict`, which raises no length warning on a delta. Each of the two requirements
+  wants its text under 500 characters in the change's delta, in the
+  delta's own words or split into requirements that each state one
+  behavior, its scenarios kept; then `openspec archive` leaves
+  `openspec validate --specs --strict` passing. The archive was undone,
+  so nothing of it is on the branch.
