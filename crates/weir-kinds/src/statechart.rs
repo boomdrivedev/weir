@@ -12,6 +12,7 @@ use crate::deliverable::Deliverable;
 use crate::fields::{boolean, field, unnamed};
 use crate::identity::Identity;
 use crate::kinds::{read_branch, read_landing_fix, read_max_landing_fixes, read_version};
+use crate::name::{fault, NAME};
 use crate::refusal::Problems;
 
 /// The fields of a statechart kind the format names; every other key is a
@@ -31,7 +32,7 @@ const KIND_FIELDS: [&str; 8] = [
 const REGION_FIELDS: [&str; 2] = ["initial", "states"];
 
 /// The fields of a state the format names (94, C.4).
-const STATE_FIELDS: [&str; 1] = ["final"];
+const STATE_FIELDS: [&str; 5] = ["final", "machine", "params", "enter", "regions"];
 
 /// Why a statechart kind that does not land names no landing fix (94, 57;
 /// record 0005).
@@ -178,7 +179,7 @@ pub(crate) fn read_statechart_kind(
     let before = walk.problems.len();
     let lands = boolean(kind, "lands", at, walk.problems);
     let lands_read = (walk.problems.len() == before).then_some(lands);
-    let regions = walk.regions(kind.get("regions"), &field(at, "regions"));
+    let regions = walk.regions(kind.get("regions"), &field(at, "regions"), None);
     // Beside a `lands` the read refused, `lands` is named once, by its own
     // field, and neither is judged against it (57).
     let not_landing = lands_read == Some(false);
@@ -251,59 +252,231 @@ impl Walk<'_> {
         }
     }
 
-    /// A statechart's `regions`, at `here`, by name in name order (94).
-    fn regions(&mut self, regions: Option<&Value>, here: &str) -> BTreeMap<String, Region> {
+    /// A statechart's `regions` at `here`, by name in name order: the
+    /// kind's, `within` none, one or more, and a state's own, `within` the
+    /// state's path, none when left out or empty (94, 95). A region's key is
+    /// a name, and one that is no name is refused naming it, nothing under
+    /// it read (C.4; core.42).
+    fn regions(
+        &mut self,
+        regions: Option<&Value>,
+        here: &str,
+        within: Option<&str>,
+    ) -> BTreeMap<String, Region> {
         let mut read = BTreeMap::new();
-        let Some(Value::Table(regions)) = regions else {
-            return read;
-        };
-        for (name, region) in in_name_order(regions) {
-            let at = field(here, name);
-            if let Value::Table(region) = region {
-                read.insert(name.clone(), self.region(region, &at));
+        let table = match (regions, within) {
+            (None, Some(_)) => return read,
+            (Some(Value::Table(table)), Some(_)) => table,
+            (Some(Value::Table(table)), None) if !table.is_empty() => table,
+            (Some(Value::Table(_)), None) => {
+                self.problems
+                    .refuse(here, "is empty, and a statechart holds one or more regions");
+                return read;
             }
+            _ => {
+                self.problems.refuse(
+                    here,
+                    "must be a table of regions, each with its initial state and its states",
+                );
+                return read;
+            }
+        };
+        for (name, region) in in_name_order(table) {
+            let at = field(here, name);
+            if let Some(fault) = fault(name) {
+                self.problems
+                    .refuse(&at, format!("{fault}, and a region's name is {NAME}"));
+                continue;
+            }
+            let Value::Table(region) = region else {
+                self.problems.refuse(
+                    &at,
+                    "must be a table holding its initial state and its states",
+                );
+                continue;
+            };
+            let path = match within {
+                None => name.clone(),
+                Some(within) => format!("{within}.{name}"),
+            };
+            read.insert(name.clone(), self.region(region, &at, &path));
         }
         read
     }
 
-    /// A region, `regions.<region>` at `at`: its initial state and its
-    /// states (94, C.4).
-    fn region(&mut self, region: &Table, at: &str) -> Region {
+    /// A region, `regions.<region>` at `at`, its path `path`: its initial
+    /// state and its states, the states in name order and then, once they
+    /// are read, every name of a state of the region checked against them
+    /// (94, 95; C.4). Where its `states` is refused, its `initial` is named
+    /// for its own shape alone, judged against no states.
+    fn region(&mut self, region: &Table, at: &str, path: &str) -> Region {
         let initial = match region.get("initial") {
-            Some(Value::String(initial)) => initial.clone(),
-            _ => String::new(),
+            None => {
+                self.problems.refuse(
+                    &field(at, "initial"),
+                    "is missing, and a region names the state it starts in",
+                );
+                None
+            }
+            Some(Value::String(initial)) if !initial.is_empty() => Some(initial.clone()),
+            Some(_) => {
+                self.problems.refuse(
+                    &field(at, "initial"),
+                    "must be a non-empty string naming a state of the region",
+                );
+                None
+            }
         };
+        let here = field(at, "states");
         let mut states = BTreeMap::new();
-        if let Some(Value::Table(table)) = region.get("states") {
-            for (name, state) in in_name_order(table) {
-                if let Value::Table(state) = state {
-                    let at = field(&field(at, "states"), name);
-                    states.insert(name.clone(), self.state(state, &at));
+        let mut targets = Targets::default();
+        let names = match region.get("states") {
+            None => {
+                self.problems
+                    .refuse(&here, "is missing, and a region holds one or more states");
+                None
+            }
+            Some(Value::Table(table)) if table.is_empty() => {
+                self.problems
+                    .refuse(&here, "is empty, and a region holds one or more states");
+                None
+            }
+            Some(Value::Table(table)) => {
+                for (name, state) in in_name_order(table) {
+                    let at = field(&here, name);
+                    if let Some(fault) = fault(name) {
+                        self.problems
+                            .refuse(&at, format!("{fault}, and a state's name is {NAME}"));
+                        continue;
+                    }
+                    let Value::Table(state) = state else {
+                        self.problems.refuse(&at, "must be a table");
+                        continue;
+                    };
+                    let state = self.state(state, &at, &format!("{path}.{name}"), &mut targets);
+                    states.insert(name.clone(), state);
                 }
+                Some(table)
+            }
+            Some(_) => {
+                self.problems
+                    .refuse(&here, "must be a table of one or more states");
+                None
+            }
+        };
+        if let Some(names) = names {
+            if let Some(initial) = &initial {
+                self.held(names, &field(at, "initial"), initial);
+            }
+            for (at, target) in &targets.to {
+                self.held(names, at, target);
+            }
+            for (at, target) in &targets.on_fail {
+                self.held(names, at, target);
             }
         }
         Region {
-            initial,
+            initial: initial.unwrap_or_default(),
             states,
             sections: unnamed(region, &REGION_FIELDS),
         }
     }
 
-    /// A state, `states.<state>` at `at` (94, C.4).
-    fn state(&mut self, state: &Table, at: &str) -> State {
+    /// A state's name a field at `at` gives, refused naming the field
+    /// where `states`, its region's as written, holds no state of that
+    /// name (95).
+    fn held(&mut self, states: &Table, at: &str, name: &str) {
+        if !states.contains_key(name) {
+            self.problems
+                .refuse(at, format!("`{name}` names no state of this region"));
+        }
+    }
+
+    /// A state, `states.<state>` at `at`, its path `path`, every name of a
+    /// state of its region it gives gathered in `targets` (94, C.4).
+    fn state(&mut self, state: &Table, at: &str, path: &str, targets: &mut Targets) -> State {
+        let _ = targets;
+        let is_final = boolean(state, "final", at, self.problems);
+        let machine = self.name(state, "machine", at);
+        let params = match state.get("params") {
+            None => None,
+            Some(Value::Table(params)) => Some(params.clone()),
+            Some(_) => {
+                self.problems.refuse(
+                    &field(at, "params"),
+                    "must be a table of the parameters it gives what it runs",
+                );
+                None
+            }
+        };
+        let enter = self.enter(state, at);
+        let regions = self.regions(state.get("regions"), &field(at, "regions"), Some(path));
         State {
-            is_final: boolean(state, "final", at, self.problems),
+            is_final,
             decision: None,
             entry: Vec::new(),
             exit: Vec::new(),
-            machine: None,
-            params: None,
-            enter: BTreeMap::new(),
-            regions: BTreeMap::new(),
+            machine,
+            params,
+            enter,
+            regions,
             transitions: Vec::new(),
             sections: unnamed(state, &STATE_FIELDS),
         }
     }
+
+    /// A field holding a name as written, a non-empty string; `None` when
+    /// left out (94).
+    fn name(&mut self, table: &Table, name: &str, at: &str) -> Option<String> {
+        match table.get(name)? {
+            Value::String(text) if !text.is_empty() => Some(text.clone()),
+            _ => {
+                self.problems
+                    .refuse(&field(at, name), "must be a non-empty string");
+                None
+            }
+        }
+    }
+
+    /// An `enter`, a state's or a transition's: for each region of what the
+    /// state runs, the state it enters, a non-empty string, as written; none
+    /// when left out (94, 96).
+    fn enter(&mut self, table: &Table, at: &str) -> BTreeMap<String, String> {
+        let here = field(at, "enter");
+        let mut read = BTreeMap::new();
+        match table.get("enter") {
+            None => {}
+            Some(Value::Table(enter)) => {
+                for (region, state) in in_name_order(enter) {
+                    match state {
+                        Value::String(state) if !state.is_empty() => {
+                            read.insert(region.clone(), state.clone());
+                        }
+                        _ => self.problems.refuse(
+                            &field(&here, region),
+                            "must be a non-empty string naming the state it enters",
+                        ),
+                    }
+                }
+            }
+            Some(_) => self.problems.refuse(
+                &here,
+                "must be a table naming, for each region, the state it enters",
+            ),
+        }
+        read
+    }
+}
+
+/// Every name of a state of its region a region's states give, each with
+/// the path of the field that gives it, checked once the region's states
+/// are read (95).
+#[derive(Default)]
+struct Targets {
+    /// Each transition's `to`, in state order and then the order written.
+    to: Vec<(String, String)>,
+    /// Each state's `params.on_fail`, in state order.
+    on_fail: Vec<(String, String)>,
 }
 
 /// A table's entries in name order, whatever order the table keeps, so

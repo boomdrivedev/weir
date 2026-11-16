@@ -280,3 +280,109 @@ fn a_landing_fix_on_a_statechart_kind_that_does_not_land() {
         assert!(problem.reason.contains("does not land"), "{problem}");
     }
 }
+
+// A statechart holds regions and each region states.
+
+#[test]
+fn a_statechart_kind_with_no_region() {
+    let refusal = refused("[kinds.persona]\ntitle = \"Persona test\"\nregions = {}");
+    assert_eq!(fields(&refusal), ["kinds.persona.regions"]);
+}
+
+#[test]
+fn a_region_with_no_states() {
+    let refusal = refused(
+        r#"
+[kinds.persona]
+title = "Persona test"
+regions.a.initial = "a"
+regions.b.initial = "a"
+regions.b.states = {}
+"#,
+    );
+    assert_eq!(
+        fields(&refusal),
+        [
+            "kinds.persona.regions.a.states",
+            "kinds.persona.regions.b.states"
+        ]
+    );
+}
+
+// A region's initial state is one it holds.
+
+#[test]
+fn an_initial_state_the_region_does_not_hold() {
+    let refusal = refused(
+        r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "c"
+regions.main.states.a = {}
+regions.main.states.b.final = true
+"#,
+    );
+    assert_eq!(fields(&refusal), ["kinds.persona.regions.main.initial"]);
+    assert!(refusal.problems[0].reason.contains("`c`"), "{refusal}");
+}
+
+// A region's and a state's key is a name.
+
+#[test]
+fn a_state_named_by_a_key_that_is_not_a_name() {
+    let refusal = refused(
+        r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "a"
+regions.main.states.a.final = true
+regions.main.states."a.b".final = "yes"
+regions.main.states."a.b".regions = 1
+"#,
+    );
+    assert_eq!(
+        fields(&refusal),
+        [r#"kinds.persona.regions.main.states."a.b""#]
+    );
+    assert!(
+        refusal.problems[0]
+            .reason
+            .contains("a state's name is one or more ASCII letters, digits, `_` and `-`"),
+        "{refusal}"
+    );
+}
+
+// A state's own regions are checked as any region.
+
+#[test]
+fn a_nested_region_is_checked_as_any() {
+    let nested = r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "build"
+
+[kinds.persona.regions.main.states.build]
+machine = "checks"
+params = { lint = true }
+enter = { inner = "start" }
+regions.checks.initial = "lint"
+regions.checks.states.lint.final = true
+"#;
+    let persona = statechart(nested, "persona");
+    let build = &persona.statechart.regions["main"].states["build"];
+    assert_eq!(build.machine.as_deref(), Some("checks"));
+    assert_eq!(build.params, Some(table("lint = true")));
+    assert_eq!(build.enter["inner"], "start");
+    let checks = &build.regions["checks"];
+    assert_eq!(checks.initial, "lint");
+    assert!(checks.states["lint"].is_final);
+
+    let refusal = refused(&nested.replace(
+        "regions.checks.initial = \"lint\"",
+        "regions.checks.initial = \"test\"",
+    ));
+    assert_eq!(
+        fields(&refusal),
+        ["kinds.persona.regions.main.states.build.regions.checks.initial"]
+    );
+}
