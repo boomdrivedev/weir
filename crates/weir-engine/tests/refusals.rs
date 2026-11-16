@@ -94,3 +94,25 @@ fn a_region_a_state_and_its_template_both_hold() {
         }
     );
 }
+
+#[test]
+fn a_transition_to_a_state_its_region_does_not_hold() {
+    let mut chart = s21_lamp();
+    chart
+        .regions
+        .get_mut("power")
+        .and_then(|power| power.states.get_mut("off"))
+        .expect("off")
+        .transitions[0]
+        .to = "lit".into();
+    let state = holding(&[("power", "off")], at(0));
+    let snapshot = with_evidence(snapshot(at(1)), &[("lamp.switch", "up".into())]);
+    let refused = tick(&chart, &templates(), &proofs(), &state, &snapshot).expect_err("refused");
+    assert_eq!(
+        refused,
+        Refusal {
+            path: "power.off".into(),
+            reason: "moves to `lit`, which its region does not hold".into(),
+        }
+    );
+}

@@ -428,8 +428,13 @@ with it that it binds each atom a kind names (flume 178).
 | a state's path | runs `<name>`, which is no template given |
 | a state's path | runs `<name>`, a statechart it already lies inside |
 | a state's path | holds a region `<region>` as its own and in the template it runs |
+| a state's path | moves to `<to>`, which its region does not hold |
 
-A state's path is `<region path>.<state>`.
+A state's path is `<region path>.<state>`. `read-kinds` refuses a
+transition to a state its region does not hold (core.54), so the tick
+meets one only in a statechart built from the engine's types by hand, and
+refuses it when its guard holds. Not taken: passing over such a
+transition as though its guard did not hold, which would hide the fault.
 
 ### 15. The engine's tests and the toy
 
