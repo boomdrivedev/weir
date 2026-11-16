@@ -1,0 +1,45 @@
+# A statechart kind is checked whole: a region with no states, an initial
+# state its region does not hold, a guard of no form, a join that is not
+# all, any or a count, a deliverable not of the format's spellings and a
+# final of the wrong shape, each refused naming its field in one refusal,
+# in the reader's walk (95; C.4).
+satisfies = [95]
+declaration = """
+[kinds.persona]
+title = "Persona test"
+
+[kinds.persona.regions.a]
+initial = "x"
+
+[kinds.persona.regions.b]
+initial = "y"
+
+[kinds.persona.regions.b.states.s]
+final = "yes"
+params = { join = "most", deliverables = ["commit"] }
+transitions = [{ when = { ev = "switch" }, to = "s" }]
+"""
+
+[[expect.refused]]
+field = "kinds.persona.regions.a.states"
+reason_holds = "is missing, and a region holds one or more states"
+
+[[expect.refused]]
+field = "kinds.persona.regions.b.states.s.final"
+reason_holds = "must be true or false"
+
+[[expect.refused]]
+field = "kinds.persona.regions.b.states.s.params.join"
+reason_holds = "`most` is not all, any or count:<n>"
+
+[[expect.refused]]
+field = "kinds.persona.regions.b.states.s.params.deliverables"
+reason_holds = "`commit` is not one of commits, change, tasks, archived"
+
+[[expect.refused]]
+field = "kinds.persona.regions.b.states.s.transitions[0].when"
+reason_holds = "is not a guard of a form the format names"
+
+[[expect.refused]]
+field = "kinds.persona.regions.b.initial"
+reason_holds = "`y` names no state of this region"

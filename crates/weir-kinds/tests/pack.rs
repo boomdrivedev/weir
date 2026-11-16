@@ -1199,6 +1199,77 @@ stages = [{ name = "review", end = "commits" }]
     );
 }
 
+/// S19's declaration, a simple kind beside a statechart kind, read the
+/// same twice and as the kinds crate's `persona.toml`; its third kind
+/// holding both `stages` and `regions`, refused naming its `regions`; and
+/// S20's transition, refused naming its `to` (51, 81, 94, 95; C.4).
+#[test]
+fn the_cases_of_s19_and_s20() {
+    let name = "a-statechart-kind-beside-a-simple-kind";
+    let beside = case(name);
+    let Form::Declaration { text, expect } = &beside.form else {
+        panic!("{name}: a declaration's case");
+    };
+    let fixture = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/persona.toml"),
+    )
+    .unwrap();
+    assert_eq!(read(text), read(&fixture), "{name}");
+    let kinds = expect.kinds.as_ref().unwrap();
+    assert_eq!(kinds.keys().collect::<Vec<_>>(), ["bump"]);
+    let stages: Vec<(&str, &str)> = kinds["bump"]
+        .stages
+        .iter()
+        .map(|stage| (stage.name.as_str(), stage.end.as_str()))
+        .collect();
+    assert_eq!(stages, [("code", "commits"), ("review", "conversation")]);
+    let statecharts = expect.statecharts.as_ref().unwrap();
+    assert_eq!(statecharts.keys().collect::<Vec<_>>(), ["persona"]);
+    let persona = &statecharts["persona"];
+    assert_eq!(
+        persona.regions["stages"].states["test"].machine.as_deref(),
+        Some("stage")
+    );
+    let test = &persona.params["stages.test"];
+    assert_eq!(
+        test.agents.as_deref(),
+        Some("rule every-persona-definition")
+    );
+    assert_eq!(test.join.as_deref(), Some("all"));
+    assert_eq!(differences(name, &beside), Vec::<String>::new());
+
+    for (name, field, holds) in [
+        (
+            "a-kind-holding-both-stages-and-regions",
+            "kinds.both.regions",
+            "beside `stages`",
+        ),
+        (
+            "a-transition-to-a-state-its-region-does-not-hold",
+            "kinds.persona.regions.stages.states.test.transitions[0].to",
+            "`tested`",
+        ),
+    ] {
+        let refusing = case(name);
+        let refused = declaration_expect(&refusing).refused.as_ref().unwrap();
+        assert_eq!(refused.len(), 1, "{name}");
+        assert_eq!(refused[0].field, field, "{name}");
+        assert!(refused[0].reason_holds.contains(holds), "{name}");
+        assert_eq!(differences(name, &refusing), Vec::<String>::new());
+    }
+}
+
+#[test]
+fn the_cases_cite_94_and_95() {
+    let cited: BTreeSet<i64> = cases()
+        .iter()
+        .flat_map(|(_, case)| case.satisfies.iter().filter_map(toml::Value::as_integer))
+        .collect();
+    for clause in [94, 95] {
+        assert!(cited.contains(&clause), "no kinds case cites {clause}");
+    }
+}
+
 #[test]
 fn a_case_whose_statechart_differs_is_named() {
     // A statechart kind is held against the kind read, each difference
