@@ -225,6 +225,45 @@ fn no_kind_or_two() {
     );
 }
 
+/// A statechart kind `persona` with a title and one region.
+const PERSONA: &str = r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "done"
+regions.main.states.done.final = true
+"#;
+
+// A package of a statechart kind is refused naming its kind.
+
+#[test]
+fn a_package_of_a_statechart_kind() {
+    let problems = refused(read(PERSONA, &[], "acme/persona@1"));
+    assert_eq!(fields(&problems), ["kinds.persona"]);
+    assert!(
+        problems[0].reason.contains("is a statechart kind"),
+        "{}",
+        problems[0]
+    );
+    assert_eq!(
+        problems[0].reason,
+        "is a statechart kind, and read-package reads a package of a simple kind alone"
+    );
+}
+
+#[test]
+fn a_simple_kind_and_a_statechart_kind_in_one_package() {
+    let problems = refused(read(
+        &format!("{REVIEW}{PERSONA}"),
+        &[PROMPT],
+        "acme/review@1",
+    ));
+    assert_eq!(fields(&problems), ["kinds"]);
+    assert_eq!(
+        problems[0].reason,
+        "declares 2 kinds, `persona` and `review`, and a package declares exactly one kind"
+    );
+}
+
 #[test]
 fn settings_for_another_kind() {
     let kind_toml = format!("{REVIEW}\n[kinds.fix.agents]\nmodel = \"opus\"\n");

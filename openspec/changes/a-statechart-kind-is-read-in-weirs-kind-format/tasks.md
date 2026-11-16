@@ -31,7 +31,7 @@ checks once every task is done.
 
 ## 3. A package of a statechart kind
 
-- [ ] 3.1 In `read_package`, count the declaration's statechart kinds with its simple kinds, the names of both in name order in the refusal of several, and refuse a package whose one kind is a statechart kind naming `kinds.<kind>`, as design 12 says. Add `a_package_of_a_statechart_kind` and `a_simple_kind_and_a_statechart_kind_in_one_package` to `crates/weir-kinds/tests/package.rs` (design 12; 89, 92; core.43). True when `devenv shell -- moon run kinds:test -- --test package` passes, holding the kind-packages scenarios of those names.
+- [x] 3.1 In `read_package`, count the declaration's statechart kinds with its simple kinds, the names of both in name order in the refusal of several, and refuse a package whose one kind is a statechart kind naming `kinds.<kind>`, as design 12 says. Add `a_package_of_a_statechart_kind` and `a_simple_kind_and_a_statechart_kind_in_one_package` to `crates/weir-kinds/tests/package.rs` (design 12; 89, 92; core.43). True when `devenv shell -- moon run kinds:test -- --test package` passes, holding the kind-packages scenarios of those names.
 
 ## 4. weir check
 
