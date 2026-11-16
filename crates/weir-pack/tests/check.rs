@@ -8,8 +8,8 @@ use std::path::Path;
 
 use weir_pack::{check, Clause, Fault, Pack, Shape};
 
-/// A small index: one clause or a few in each counted section, A.14 among
-/// them, the pack's own and the never-does clauses, and a section of Part
+/// A small index: one clause or a few in each counted section, A.13 and
+/// A.14 among them, the pack's own and the never-does clauses, and a section of Part
 /// B.
 const INDEX: &str = r#"statement = "boomdrivedev/blueprints:design/weir/requirements.md"
 commit = "ae9d782"
@@ -63,6 +63,10 @@ name = "A.12"
 clauses = [69, 70, 71]
 
 [[section]]
+name = "A.13"
+clauses = [96, 97, 98]
+
+[[section]]
 name = "A.14"
 clauses = [102, 106]
 
@@ -92,7 +96,8 @@ fn write_all(root: &Path, files: &[(&str, &str)]) {
 }
 
 /// A pack that passes: every counted clause cited, 60 only by a cadence
-/// case, 48 only by a branch case and 102 and 106 only by a delivery case,
+/// case, 48 only by a branch case, 96, 97 and 98 only by a tick case and
+/// 102 and 106 only by a delivery case,
 /// `"75a"` cited, 69 cited by none and 87 by one.
 fn passing() -> Vec<(&'static str, &'static str)> {
     vec![
@@ -110,6 +115,10 @@ fn passing() -> Vec<(&'static str, &'static str)> {
             "satisfies = [26, 33, 35, 37, \"75a\"]\n",
         ),
         ("kinds/two-deliverables/case.toml", "satisfies = [57]\n"),
+        (
+            "tick/a-response-applied-once/case.toml",
+            "satisfies = [96, 97, 98]\n",
+        ),
         (
             "delivery/a-second-confirmation/case.toml",
             "satisfies = [102, 106]\n",
@@ -148,7 +157,7 @@ fn a_pack_that_passes_says_how_many_cases_of_each_shape() {
     }
     assert_eq!(
         checked.to_string(),
-        "the pack passed, its cases read: 1 host, 1 adapter, 1 cadence, 1 branch, 1 inbox, 1 kinds, 1 delivery"
+        "the pack passed, its cases read: 1 host, 1 adapter, 1 cadence, 1 branch, 1 inbox, 1 kinds, 1 tick, 1 delivery"
     );
 }
 
@@ -161,7 +170,7 @@ fn a_delivery_case_is_a_case_of_the_pack() {
     assert_eq!(cases.len(), 1);
     assert_eq!(cases[0].id(), "delivery/a-second-confirmation");
     assert_eq!(Shape::parse("delivery"), Some(Shape::Delivery));
-    assert_eq!(Shape::ALL.len(), 7);
+    assert_eq!(Shape::ALL.len(), 8);
     let no_clause = with(
         &passing(),
         "delivery/a-second-confirmation/case.toml",
@@ -174,6 +183,30 @@ fn a_delivery_case_is_a_case_of_the_pack() {
 }
 
 #[test]
+fn a_tick_case_is_a_case_of_the_pack() {
+    let (_dir, pack) = pack_of(&passing());
+    let checked = check(&pack).unwrap_or_else(|faults| panic!("{faults:?}"));
+    assert_eq!(checked.read[&Shape::Tick], 1);
+    let cases = pack.cases(Shape::Tick);
+    assert_eq!(cases.len(), 1);
+    assert_eq!(cases[0].id(), "tick/a-response-applied-once");
+    assert_eq!(Shape::parse("tick"), Some(Shape::Tick));
+    assert_eq!(Shape::Tick.to_string(), "tick");
+    let at = |shape| Shape::ALL.iter().position(|s| *s == shape).unwrap();
+    assert_eq!(at(Shape::Tick), at(Shape::Kinds) + 1, "after kinds");
+    assert_eq!(at(Shape::Delivery), at(Shape::Tick) + 1, "before delivery");
+    let no_clause = with(
+        &passing(),
+        "tick/a-response-applied-once/case.toml",
+        Some("satisfies = [96, 97, 98, 140]\n"),
+    );
+    assert_eq!(
+        faults(&no_clause),
+        ["pack/tick/a-response-applied-once: cites 140, which names no clause of the statement"]
+    );
+}
+
+#[test]
 fn a_folder_of_no_shape() {
     let files = with(
         &passing(),
@@ -182,7 +215,7 @@ fn a_folder_of_no_shape() {
     );
     assert_eq!(
         faults(&files),
-        ["pack/hosts: is no shape of the pack, which are host, adapter, cadence, branch, inbox, kinds, delivery"]
+        ["pack/hosts: is no shape of the pack, which are host, adapter, cadence, branch, inbox, kinds, tick, delivery"]
     );
     let stray = with(&passing(), "README.md", Some("# The pack\n"));
     assert_eq!(faults(&stray).len(), 1);
@@ -291,6 +324,16 @@ fn a_clause_of_a14_cited_by_no_case() {
 }
 
 #[test]
+fn a_clause_of_a13_cited_by_no_case() {
+    let files = with(
+        &passing(),
+        "tick/a-response-applied-once/case.toml",
+        Some("satisfies = [96, 98]\n"),
+    );
+    assert_eq!(faults(&files), ["97: is cited by no case"]);
+}
+
+#[test]
 fn a_clause_the_check_does_not_count() {
     // No case cites 65, 66, 67, 68, 69 or 70, and the held-key case cites
     // 87; the passing pack passes all the same.
@@ -325,7 +368,7 @@ fn every_fault_is_named_at_once() {
     assert_eq!(
         said,
         [
-            "pack/hosts: is no shape of the pack, which are host, adapter, cadence, branch, inbox, kinds, delivery",
+            "pack/hosts: is no shape of the pack, which are host, adapter, cadence, branch, inbox, kinds, tick, delivery",
             "pack/host/held-key: cites 140, which names no clause of the statement",
             "14: is cited by no case",
             "71: is cited by no case",

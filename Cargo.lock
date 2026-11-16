@@ -1367,6 +1367,7 @@ dependencies = [
 name = "weir-engine"
 version = "0.0.0"
 dependencies = [
+ "time",
  "toml",
 ]
 
@@ -1392,6 +1393,8 @@ dependencies = [
  "toml",
  "weir-capture",
  "weir-delivery",
+ "weir-engine",
+ "weir-kinds",
 ]
 
 [[package]]

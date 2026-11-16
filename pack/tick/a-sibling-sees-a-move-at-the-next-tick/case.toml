@@ -1,0 +1,42 @@
+# A lamp of two regions: `power`, moving `on` when `lamp.switch` reads `up`,
+# and `shade`, moving `up` when a `region` guard reads `power` in `on`.
+# Ticked with `power` in `off` and `lamp.switch` read `up`, `power` moves and
+# `shade` does not: every guard reads the state as given (96).
+satisfies = [96]
+declaration = """
+[kinds.lamp]
+version = 1
+title = "Lamp"
+
+[kinds.lamp.regions.power]
+initial = "off"
+
+[kinds.lamp.regions.power.states.off]
+transitions = [{ when = { ev = "lamp.switch", is = "up" }, to = "on" }]
+
+[kinds.lamp.regions.power.states.on]
+
+[kinds.lamp.regions.shade]
+initial = "down"
+
+[kinds.lamp.regions.shade.states.down]
+transitions = [
+  { when = { region = { name = "power", in = ["on"] } }, to = "up" },
+]
+
+[kinds.lamp.regions.shade.states.up]
+"""
+chart = "lamp"
+proofs = {}
+
+[state]
+regions = { power = "off", shade = "down" }
+entered_at = { power = 2026-09-04T12:00:00Z, shade = 2026-09-04T12:00:00Z }
+
+[snapshot]
+at = 2026-09-04T12:01:00Z
+evidence = { "lamp.switch" = "up" }
+
+[expect]
+fired = [{ region = "power", from = "off", to = "on", effects = [] }]
+next = { regions = { power = "on", shade = "down" }, entered_at = { power = 2026-09-04T12:01:00Z, shade = 2026-09-04T12:00:00Z } }

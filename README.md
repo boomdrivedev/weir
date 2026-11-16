@@ -30,7 +30,7 @@ conformance pack do that for the family's captures.
 | `weir-branch` | The one write protocol for a shared branch. |
 | `weir-bounded` | A call to a remote run to the family's limit for a try, or to its caller's halt, ended with everything it started. |
 | `weir-kinds` | The one kind format, its simple and statechart kinds, with an elaboration kind's section, a kind's packages, their content hash and locks. |
-| `weir-engine` | A statechart's types, which `weir-kinds` reads a statechart kind into and the engine ticks. |
+| `weir-engine` | A statechart's types, which `weir-kinds` reads a statechart kind into, and the engine's tick: one pass over one object's state and one snapshot, giving the transitions that fire, their effects and the next state. |
 | `weir-cadence` | Five-field cron, caught up once after a missed run. |
 | `weir-policy` | The facts a signal carries, the people list they are joined from, and the keeper's policy, read and checked once for every host, which `weir-capture`'s `take` reads in a capture's write. |
 | `weir-delivery` | One form for a message a tool owes a reader, owed until the reader confirms it by its key: its records, their spellings and the calls over a deliverer's own store. |

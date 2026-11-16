@@ -41,7 +41,7 @@ fn files(dir: &Path, found: &mut Vec<(String, String)>) {
 }
 
 #[test]
-fn the_engines_code_names_no_tool_of_the_family() {
+fn the_code_names_no_tool_of_the_family() {
     let mut found = Vec::new();
     files(
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),

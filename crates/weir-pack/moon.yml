@@ -2,16 +2,17 @@ $schema: 'https://moonrepo.dev/schemas/project.json'
 
 # weir-pack: the conformance pack. One task per check, each run from the
 # workspace root (core.39). The pack's files are built into the crate, so
-# every file under pack/ is among each task's inputs, beside the capture
-# and delivery crates it builds on, weir-policy and weir-cadence, which the
-# capture crate builds on, and the toolchain's (kit:testing.3).
+# every file under pack/ is among each task's inputs, beside the capture,
+# delivery, kinds and engine crates it builds on, weir-policy and
+# weir-cadence, which the capture crate builds on, and the toolchain's
+# (kit:testing.3).
 language: 'rust'
-dependsOn: [capture, delivery]
+dependsOn: [capture, delivery, kinds, engine]
 
 tasks:
   format:
     command: 'cargo fmt -p weir-pack --check'
-    inputs: &inputs ['/crates/weir-pack/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/crates/weir-delivery/**/*', '/pack/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: &inputs ['/crates/weir-pack/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/crates/weir-delivery/**/*', '/crates/weir-kinds/**/*', '/crates/weir-engine/**/*', '/pack/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   lint:

@@ -1,6 +1,6 @@
 [package]
 name = "weir-engine"
-description = "The engine's crate: a statechart's types, its regions, states, transitions, guards, effects and decisions, which weir-kinds reads a statechart kind into (94, C.4; section 9)"
+description = "The engine's crate: a statechart's types, which weir-kinds reads a statechart kind into, and the engine's tick, start, decisions and names over them, each answering from its inputs with no store, no clock and no evidence of its own, moved from the original flywheel-engine onto those types (94 to 99, C.4; section 9)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,9 @@ license.workspace = true
 # The values a statechart holds as written, a guard's compared values, an
 # effect's arguments and every key the format does not name (C.4).
 toml.workspace = true
+# The snapshot's time, a region's entered time and an age measured to it
+# (96).
+time.workspace = true
 
 [lib]
 doctest = false
