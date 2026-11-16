@@ -20,3 +20,4 @@ mod policy;
 mod reading;
 
 pub use fact::{sort, FactError, Facts, Sort, Value};
+pub use people::{About, Org, People, Person, SettingsError};
