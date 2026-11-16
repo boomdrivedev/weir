@@ -15,7 +15,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 use time::format_description::well_known::Rfc3339;
 use time::{OffsetDateTime, UtcOffset};
-use weir_policy::{People, Policy, Priority};
+use weir_policy::{Facts, Outcome, People, Policy, Priority, Rule, Stated};
 
 use crate::capture::{CameIn, Capture};
 use crate::cut::{cut, LeftOut, SMALLEST_LIMIT};
@@ -563,7 +563,11 @@ pub fn take<L: AsRef<str>>(
 /// Banks and writes one offer whose key the inbox does not hold, or says
 /// why not: steps 3 to 6 of C.1. An own excerpt, cut to the limit, becomes
 /// the capture's one signal, written with it in one write, and the capture
-/// is not unread; every other capture is written unread (19, 20). When the
+/// is not unread; every other capture is written unread (19, 20). A take
+/// given a policy reads it at the taken-at time, for an own excerpt's
+/// signal or, where there is none, for the capture as it lands; a capture
+/// a rule matches as it lands is its own signal, and the rule's move is
+/// handed over in the same write (125 to 128; core.13, core.57). When the
 /// inbox refuses the write, what was banked for it is discarded (18).
 fn take_offer(
     offer: Offer,
@@ -593,6 +597,38 @@ fn take_offer(
             }
         }
     };
+    let rule = how.keeper.as_ref().and_then(|keeper| {
+        let stated = Stated {
+            facts: &offer.facts,
+            source: &offer.source,
+            title: offer.title.as_deref(),
+            event_at: &offer.event_at,
+        };
+        let rule = if excerpt.is_some() {
+            keeper
+                .policy
+                .for_signal(&stated, &Facts::new(), &keeper.people, how.taken_at_instant)
+        } else {
+            keeper
+                .policy
+                .for_capture(&stated, &keeper.people, how.taken_at_instant)
+        };
+        rule.map(|rule| rule_move(rule, how.taken_at_instant, &keeper.zone))
+    });
+    let rules_own_signal = (excerpt.is_none() && rule.is_some()).then(|| {
+        let text = offer.title.clone().unwrap_or_else(|| offer.key.to_string());
+        OwnSignal {
+            signal: format!("{}#1", offer.key),
+            kind: None,
+            asserted_by: offer.source.clone(),
+            assertion: text.clone(),
+            subjects: Vec::new(),
+            argues_with: Vec::new(),
+            position: "title".to_string(),
+            excerpt: text,
+            cut: None,
+        }
+    });
     let own_signal = excerpt.map(|(excerpt, cut)| OwnSignal {
         signal: format!("{}#1", offer.key),
         kind: Some(excerpt.kind),
@@ -604,6 +640,7 @@ fn take_offer(
         excerpt: cut.text,
         cut: cut.left_out,
     });
+    let own_signal = own_signal.or(rules_own_signal);
     let capture = Capture {
         key: offer.key,
         source: offer.source,
@@ -620,7 +657,7 @@ fn take_offer(
     let taken = Taken {
         capture,
         own_signal,
-        rule_move: None,
+        rule_move: rule,
     };
     inbox.write(&taken).map_err(|refusal| {
         if taken.capture.pointer.is_some() {
@@ -628,6 +665,26 @@ fn take_offer(
         }
         format!("the inbox refused the capture: {refusal}")
     })
+}
+
+/// The move of `rule`, its item named for the taken-at time read in the
+/// machine's zone (128; C.9).
+fn rule_move(rule: &Rule, taken_at: jiff::Timestamp, zone: &TimeZone) -> RuleMove {
+    let outcome = match &rule.outcome {
+        Outcome::Drop(reason) => RuleOutcome::Drop {
+            reason: reason.clone(),
+        },
+        Outcome::Launch { .. } | Outcome::Person(_) => RuleOutcome::Join {
+            priority: rule
+                .priority
+                .expect("a policy's launch or person's turn has its priority (122)"),
+            item: rule.item_name(taken_at, zone),
+        },
+    };
+    RuleMove {
+        rule: rule.name.clone(),
+        outcome,
+    }
 }
 
 /// The raw files `raw` names, read whole from `raw_place`; a file that is
