@@ -1,3 +1,6 @@
+# The settings document of C.9's example, as written at blueprints 30dce35,
+# laid out by taplo, which owns every TOML file of the tree (core.39), with
+# one table of a host's own after it.
 [about] # what a reader's `about` picks from (120)
 teams = ["web", "platform"]
 repositories = ["acme/web-app", "acme/infra"]
