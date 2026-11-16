@@ -12,6 +12,8 @@ time.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+# A rule's window is read in the time zone a test hands `take`.
+jiff.workspace = true
 serde.workspace = true
 toml.workspace = true
 

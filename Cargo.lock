@@ -1401,6 +1401,7 @@ dependencies = [
 name = "weir-signals"
 version = "0.0.0"
 dependencies = [
+ "jiff",
  "serde",
  "tempfile",
  "time",

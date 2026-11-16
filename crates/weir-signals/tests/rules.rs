@@ -4,9 +4,13 @@
 
 mod common;
 
+use jiff::tz::TimeZone;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 use weir_capture::rec;
-use weir_capture::{Capture, Nature, OwnSignal, RuleMove, RuleOutcome, Taken};
-use weir_policy::Priority;
+use weir_capture::take::{take, Bank, Inbox, RawFile, Refusal, Take};
+use weir_capture::{CameIn, Capture, Key, Nature, OwnSignal, RuleMove, RuleOutcome, Taken};
+use weir_policy::{People, Policy, Priority};
 use weir_signals::{InboxAt, Item, MadeBy, Refused, Word};
 
 use common::{after, capture, empty, paths, recfix, signal};
@@ -321,4 +325,141 @@ fn a_rules_item_under_a_used_name() {
     );
     let not_taken = refused(&concluded, &release("release/x/1.2.2", join(FIRST)));
     assert_eq!(not_taken.0[0].what, FIRST);
+}
+
+const C9: &str = include_str!("../../weir-policy/tests/c9.toml");
+
+/// An inbox a host's `take` writes through, its tip the files each write
+/// leaves, read again after each write.
+struct Tip(InboxAt);
+
+impl Inbox for Tip {
+    fn holds(&self, key: &Key) -> bool {
+        self.0.holds(key)
+    }
+
+    fn write(&mut self, taken: &Taken) -> Result<(), Refusal> {
+        let write = self.0.take(taken).map_err(|r| Refusal(r.to_string()))?;
+        self.0 = after(&self.0, &write);
+        Ok(())
+    }
+}
+
+/// A bank no offer here reaches: none names raw material or is cut.
+struct NoBank;
+
+impl Bank for NoBank {
+    fn bank(&mut self, key: &Key, _: &[RawFile], _: Option<&str>) -> Result<String, Refusal> {
+        panic!("{key} was banked")
+    }
+
+    fn discard(&mut self, key: &Key) {
+        panic!("{key} was discarded")
+    }
+}
+
+/// Takes `line` at `at` through `tip`, given C.9's policy and people list,
+/// read in UTC.
+fn take_c9(tip: &mut Tip, line: &str, at: &str) {
+    let how = Take::new(
+        "deneb",
+        OffsetDateTime::parse(at, &Rfc3339).unwrap(),
+        8192,
+        CameIn::Run("feeds".into()),
+    )
+    .unwrap()
+    .with_policy(
+        Policy::read(C9).expect("C.9's policy"),
+        People::read(C9).expect("C.9's people list"),
+        TimeZone::UTC,
+    );
+    let report = take([line], None, &how, tip, &mut NoBank);
+    assert_eq!(report.refused, [], "{report:?}");
+    assert_eq!(report.taken.len(), 1, "{report:?}");
+}
+
+/// A patch release's offer under `key`, with its notes as its own excerpt.
+fn patch_release(key: &str) -> String {
+    format!(
+        r#"{{"capture": {{"key": "{key}", "source": "release", "event_at": "2026-11-12T10:00:00Z", "title": "{key}", "facts": {{"level": "patch"}}, "excerpt": {{"text": "{key} is out.", "kind": "ask", "asserted_by": "acme/web-app", "assertion": "{key} is released", "subjects": [], "argues_with": [], "position": "release notes"}}}}}}"#
+    )
+}
+
+#[test]
+fn a_patch_release_then_another_ten_minutes_later() {
+    let mut tip = Tip(empty());
+    take_c9(
+        &mut tip,
+        &patch_release("release/web-app/1.2.1"),
+        "2026-11-12T10:05:00Z",
+    );
+    let item_path = format!("inbox/items/{FIRST}/item.rec");
+    let made = tip.0.files()[&item_path].clone();
+    let item = &tip.0.item(FIRST).expect("the rule's item").item;
+    assert_eq!(item.rule.as_deref(), Some("point-releases"));
+    assert_eq!(item.priority, Some(Priority::Low));
+    assert_eq!(item.named_by, "rule:point-releases");
+
+    take_c9(
+        &mut tip,
+        &patch_release("release/web-app/1.2.2"),
+        "2026-11-12T10:15:00Z",
+    );
+    assert_eq!(tip.0.files()[&item_path], made);
+    assert_eq!(
+        tip.0.item_signals(FIRST),
+        [
+            &signal("release/web-app/1.2.1#1"),
+            &signal("release/web-app/1.2.2#1")
+        ]
+    );
+    let items: Vec<&str> = tip
+        .0
+        .files()
+        .keys()
+        .filter(|path| path.ends_with("/item.rec"))
+        .map(String::as_str)
+        .collect();
+    assert_eq!(items, [item_path.as_str()]);
+}
+
+#[test]
+fn a_daily_stand_up_dropped_as_it_lands() {
+    let mut tip = Tip(empty());
+    let line = r#"{"capture": {"key": "meeting/file/standup", "source": "meeting", "event_at": "2026-11-12T09:00:00Z", "title": "Daily stand-up", "facts": {"length": 900, "attendee": ["dana@acme.com", "kim@globex.com", "lee@acme.com"]}}}"#;
+    let before = tip.0.files().clone();
+    take_c9(&mut tip, line, "2026-11-12T10:05:00Z");
+    let added: Vec<&str> = tip
+        .0
+        .files()
+        .keys()
+        .filter(|path| !before.contains_key(*path))
+        .map(String::as_str)
+        .collect();
+    assert_eq!(
+        added,
+        [
+            "inbox/captures/meeting/file/standup/capture.rec",
+            "inbox/captures/meeting/file/standup/signals.rec",
+            "inbox/moves/moves.rec",
+        ]
+    );
+    let key = Key::parse("meeting/file/standup").unwrap();
+    // No reader is charged with the capture: it is not unread.
+    assert!(!tip.0.is_unread(&key));
+    assert!(!tip.0.capture(&key).unwrap().unread);
+    let [own] = tip.0.signals(&key).expect("its own signal") else {
+        panic!("one signal");
+    };
+    assert_eq!(own.kind, None);
+    assert_eq!(own.excerpt, "Daily stand-up");
+    assert_eq!(own.assertion, "Daily stand-up");
+    let (_, standing) = tip
+        .0
+        .standing(&signal("meeting/file/standup#1"))
+        .expect("the rule's drop");
+    assert_eq!(standing.word, Word::Drop);
+    assert_eq!(standing.by, "rule:stand-ups");
+    assert_eq!(standing.target, "a stand-up");
+    assert!(tip.0.unmoved().is_empty());
 }
