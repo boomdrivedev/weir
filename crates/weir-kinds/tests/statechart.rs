@@ -3,6 +3,8 @@
 //! kinds and checked whole, every failing field refused by its path (51,
 //! 52, 57, 81, 94, 95; C.4; core.54).
 
+mod common;
+
 use weir_kinds::toml::Table;
 use weir_kinds::{read_kinds, Declaration, Refusal, StatechartKind};
 
@@ -561,4 +563,115 @@ fn an_older_that_is_no_duration() {
         fields(&refusal),
         ["kinds.guards.regions.main.states.a.transitions[0].when.older"]
     );
+}
+
+// Effects and decisions read with their atoms and answers.
+
+#[test]
+fn effects_and_decisions_read_as_written() {
+    let persona = statechart(
+        r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "a"
+
+[kinds.persona.regions.main.states.a]
+entry = [{ do = "light", args = { level = 3 } }]
+exit = [{ do = "dim", note = "softly" }]
+decision = { kind = "stalled", answers = ["retry", "drop"], shows = ["log"], doc = "asks once" }
+transitions = [
+  { when = { always = true }, to = "a", effects = [{ do = "notify" }], bump = "tries", enter = { inner = "start" } },
+]
+"#,
+        "persona",
+    );
+    let a = &persona.statechart.regions["main"].states["a"];
+    assert_eq!(a.entry.len(), 1);
+    assert_eq!(a.entry[0].atom, "light");
+    assert_eq!(a.entry[0].args, table("level = 3"));
+    assert!(a.entry[0].sections.is_empty());
+    assert_eq!(a.exit[0].atom, "dim");
+    assert!(a.exit[0].args.is_empty());
+    assert_eq!(a.exit[0].sections, table("note = \"softly\""));
+    let decision = a.decision.as_ref().unwrap();
+    assert_eq!(decision.kind, "stalled");
+    assert_eq!(decision.answers, ["retry", "drop"]);
+    assert_eq!(decision.shows, ["log"]);
+    assert_eq!(decision.sections, table("doc = \"asks once\""));
+    assert!(a.sections.is_empty());
+    let transition = &a.transitions[0];
+    assert_eq!(transition.effects.len(), 1);
+    assert_eq!(transition.effects[0].atom, "notify");
+    assert!(transition.effects[0].args.is_empty());
+    assert_eq!(transition.bump.as_deref(), Some("tries"));
+    assert_eq!(transition.enter["inner"], "start");
+    assert!(transition.sections.is_empty());
+}
+
+// An effect names its atom and a decision its kind.
+
+#[test]
+fn an_effect_with_no_atom_and_a_decision_with_no_kind() {
+    let refusal = refused(
+        r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "a"
+
+[kinds.persona.regions.main.states.a]
+entry = [{ args = { level = 3 } }]
+decision = { answers = ["yes"] }
+"#,
+    );
+    let at = "kinds.persona.regions.main.states.a";
+    assert_eq!(
+        fields(&refusal),
+        [format!("{at}.decision.kind"), format!("{at}.entry[0].do")]
+    );
+}
+
+// A statechart's regions and states read as written.
+
+#[test]
+fn a_statechart_reads_as_written() {
+    let declaration = common::read("persona.toml").unwrap();
+    let persona = &declaration.statecharts["persona"];
+    assert_eq!(persona.title, "Persona test");
+    assert_eq!(persona.branch, "persona");
+    let chart = &persona.statechart;
+    assert_eq!(chart.regions.keys().collect::<Vec<_>>(), ["stages"]);
+    let stages = &chart.regions["stages"];
+    assert_eq!(stages.initial, "build");
+    assert_eq!(
+        stages.states.keys().collect::<Vec<_>>(),
+        ["build", "dropped", "passed", "stopped", "test"]
+    );
+    let finals: Vec<&String> = stages
+        .states
+        .iter()
+        .filter(|(_, state)| state.is_final)
+        .map(|(name, _)| name)
+        .collect();
+    assert_eq!(finals, ["dropped", "passed"]);
+    for name in ["build", "test"] {
+        assert_eq!(
+            stages.states[name].machine.as_deref(),
+            Some("stage"),
+            "{name}"
+        );
+    }
+    let to: Vec<&str> = stages.states["test"]
+        .transitions
+        .iter()
+        .map(|transition| transition.to.as_str())
+        .collect();
+    assert_eq!(to, ["passed", "build", "stopped"]);
+    let decision = stages.states["stopped"].decision.as_ref().unwrap();
+    assert_eq!(decision.kind, "stalled");
+    assert_eq!(decision.answers, ["retry", "drop"]);
+    assert!(decision.shows.is_empty());
+    for state in stages.states.values() {
+        assert!(state.sections.is_empty());
+        assert!(state.regions.is_empty());
+    }
 }

@@ -6,10 +6,10 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use toml::{Table, Value};
-use weir_engine::{Guard, Region, State, Statechart, Transition};
+use weir_engine::{Decision, Effect, Guard, Region, State, Statechart, Transition};
 
 use crate::deliverable::Deliverable;
-use crate::fields::{boolean, field, unnamed};
+use crate::fields::{boolean, field, strings, unnamed};
 use crate::guard::read_guard;
 use crate::identity::Identity;
 use crate::kinds::{read_branch, read_landing_fix, read_max_landing_fixes, read_version};
@@ -33,8 +33,11 @@ const KIND_FIELDS: [&str; 8] = [
 const REGION_FIELDS: [&str; 2] = ["initial", "states"];
 
 /// The fields of a state the format names (94, C.4).
-const STATE_FIELDS: [&str; 6] = [
+const STATE_FIELDS: [&str; 9] = [
     "final",
+    "decision",
+    "entry",
+    "exit",
     "machine",
     "params",
     "enter",
@@ -43,7 +46,13 @@ const STATE_FIELDS: [&str; 6] = [
 ];
 
 /// The fields of a transition the format names (94, C.4).
-const TRANSITION_FIELDS: [&str; 2] = ["when", "to"];
+const TRANSITION_FIELDS: [&str; 5] = ["when", "to", "effects", "bump", "enter"];
+
+/// The fields of an effect the format names (94, C.4).
+const EFFECT_FIELDS: [&str; 2] = ["do", "args"];
+
+/// The fields of a decision the format names (94, C.4).
+const DECISION_FIELDS: [&str; 3] = ["kind", "answers", "shows"];
 
 /// Why a statechart kind that does not land names no landing fix (94, 57;
 /// record 0005).
@@ -407,6 +416,9 @@ impl Walk<'_> {
     /// state of its region it gives gathered in `targets` (94, C.4).
     fn state(&mut self, state: &Table, at: &str, path: &str, targets: &mut Targets) -> State {
         let is_final = boolean(state, "final", at, self.problems);
+        let decision = self.decision(state, at);
+        let entry = self.effects(state, "entry", at);
+        let exit = self.effects(state, "exit", at);
         let machine = self.name(state, "machine", at);
         let params = match state.get("params") {
             None => None,
@@ -424,9 +436,9 @@ impl Walk<'_> {
         let transitions = self.transitions(state, at, targets);
         State {
             is_final,
-            decision: None,
-            entry: Vec::new(),
-            exit: Vec::new(),
+            decision,
+            entry,
+            exit,
             machine,
             params,
             enter,
@@ -500,13 +512,109 @@ impl Walk<'_> {
                 String::new()
             }
         };
+        let effects = self.effects(transition, "effects", at);
+        let bump = self.name(transition, "bump", at);
+        let enter = self.enter(transition, at);
         Transition {
             when,
             to,
-            effects: Vec::new(),
-            bump: None,
-            enter: BTreeMap::new(),
+            effects,
+            bump,
+            enter,
             sections: unnamed(transition, &TRANSITION_FIELDS),
+        }
+    }
+
+    /// The effects under `name`, a state's `entry` or `exit` or a
+    /// transition's `effects`, in the order written; none when left out
+    /// (94, 96).
+    fn effects(&mut self, table: &Table, name: &str, at: &str) -> Vec<Effect> {
+        let here = field(at, name);
+        match table.get(name) {
+            None => Vec::new(),
+            Some(Value::Array(items)) => {
+                let mut read = Vec::with_capacity(items.len());
+                for (n, item) in items.iter().enumerate() {
+                    let at = format!("{here}[{n}]");
+                    match item {
+                        Value::Table(effect) => read.push(self.effect(effect, &at)),
+                        _ => self.problems.refuse(
+                            &at,
+                            "must be a table holding its atom, `do`, and its `args`",
+                        ),
+                    }
+                }
+                read
+            }
+            Some(_) => {
+                self.problems.refuse(&here, "must be an array of effects");
+                Vec::new()
+            }
+        }
+    }
+
+    /// An effect at `at`: its atom, `do`, a non-empty string it must hold,
+    /// and its `args`, a table, empty when left out (94, 98; C.4).
+    fn effect(&mut self, effect: &Table, at: &str) -> Effect {
+        let atom = self.required(effect, "do", at, "is missing, and an effect names its atom");
+        let args = match effect.get("args") {
+            None => Table::new(),
+            Some(Value::Table(args)) => args.clone(),
+            Some(_) => {
+                self.problems
+                    .refuse(&field(at, "args"), "must be a table of its arguments");
+                Table::new()
+            }
+        };
+        Effect {
+            atom,
+            args,
+            sections: unnamed(effect, &EFFECT_FIELDS),
+        }
+    }
+
+    /// A state's `decision`: its `kind`, a non-empty string it must hold,
+    /// and its `answers` and `shows`, arrays of strings, each empty when
+    /// left out; `None` when left out (94, 97; C.4).
+    fn decision(&mut self, state: &Table, at: &str) -> Option<Decision> {
+        let here = field(at, "decision");
+        let Value::Table(decision) = state.get("decision")? else {
+            self.problems.refuse(
+                &here,
+                "must be a table holding its kind, its answers and what it shows",
+            );
+            return None;
+        };
+        let kind = self.required(
+            decision,
+            "kind",
+            &here,
+            "is missing, and a decision names its kind",
+        );
+        let answers = strings(decision, "answers", &here, self.problems);
+        let shows = strings(decision, "shows", &here, self.problems);
+        Some(Decision {
+            kind,
+            answers,
+            shows,
+            sections: unnamed(decision, &DECISION_FIELDS),
+        })
+    }
+
+    /// A name a table must hold, a non-empty string, refused with
+    /// `missing` where it is left out.
+    fn required(&mut self, table: &Table, name: &str, at: &str, missing: &str) -> String {
+        match table.get(name) {
+            Some(Value::String(text)) if !text.is_empty() => text.clone(),
+            None => {
+                self.problems.refuse(&field(at, name), missing);
+                String::new()
+            }
+            Some(_) => {
+                self.problems
+                    .refuse(&field(at, name), "must be a non-empty string");
+                String::new()
+            }
         }
     }
 
