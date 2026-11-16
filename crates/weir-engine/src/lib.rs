@@ -22,6 +22,7 @@ mod refusal;
 mod snapshot;
 mod state;
 mod statechart;
+mod tick;
 
 pub use effect::{Decision, Effect};
 pub use guard::{ChildrenTest, Guard, Test};
@@ -29,3 +30,4 @@ pub use refusal::Refusal;
 pub use snapshot::{Related, Response, Snapshot};
 pub use state::ObjectState;
 pub use statechart::{Region, State, Statechart, Transition};
+pub use tick::start;
