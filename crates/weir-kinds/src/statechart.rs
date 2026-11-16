@@ -6,10 +6,11 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use toml::{Table, Value};
-use weir_engine::{Region, State, Statechart};
+use weir_engine::{Guard, Region, State, Statechart, Transition};
 
 use crate::deliverable::Deliverable;
 use crate::fields::{boolean, field, unnamed};
+use crate::guard::read_guard;
 use crate::identity::Identity;
 use crate::kinds::{read_branch, read_landing_fix, read_max_landing_fixes, read_version};
 use crate::name::{fault, NAME};
@@ -32,7 +33,17 @@ const KIND_FIELDS: [&str; 8] = [
 const REGION_FIELDS: [&str; 2] = ["initial", "states"];
 
 /// The fields of a state the format names (94, C.4).
-const STATE_FIELDS: [&str; 5] = ["final", "machine", "params", "enter", "regions"];
+const STATE_FIELDS: [&str; 6] = [
+    "final",
+    "machine",
+    "params",
+    "enter",
+    "regions",
+    "transitions",
+];
+
+/// The fields of a transition the format names (94, C.4).
+const TRANSITION_FIELDS: [&str; 2] = ["when", "to"];
 
 /// Why a statechart kind that does not land names no landing fix (94, 57;
 /// record 0005).
@@ -395,7 +406,6 @@ impl Walk<'_> {
     /// A state, `states.<state>` at `at`, its path `path`, every name of a
     /// state of its region it gives gathered in `targets` (94, C.4).
     fn state(&mut self, state: &Table, at: &str, path: &str, targets: &mut Targets) -> State {
-        let _ = targets;
         let is_final = boolean(state, "final", at, self.problems);
         let machine = self.name(state, "machine", at);
         let params = match state.get("params") {
@@ -411,6 +421,7 @@ impl Walk<'_> {
         };
         let enter = self.enter(state, at);
         let regions = self.regions(state.get("regions"), &field(at, "regions"), Some(path));
+        let transitions = self.transitions(state, at, targets);
         State {
             is_final,
             decision: None,
@@ -420,8 +431,82 @@ impl Walk<'_> {
             params,
             enter,
             regions,
-            transitions: Vec::new(),
+            transitions,
             sections: unnamed(state, &STATE_FIELDS),
+        }
+    }
+
+    /// A state's `transitions`, in priority order as written, each `to`
+    /// gathered in `targets`; none when left out (94, 96).
+    fn transitions(&mut self, state: &Table, at: &str, targets: &mut Targets) -> Vec<Transition> {
+        let here = field(at, "transitions");
+        match state.get("transitions") {
+            None => Vec::new(),
+            Some(Value::Array(items)) => {
+                let mut read = Vec::with_capacity(items.len());
+                for (n, item) in items.iter().enumerate() {
+                    let at = format!("{here}[{n}]");
+                    match item {
+                        Value::Table(transition) => {
+                            read.push(self.transition(transition, &at, targets));
+                        }
+                        _ => self.problems.refuse(
+                            &at,
+                            "must be a table holding its guard and the state it goes to",
+                        ),
+                    }
+                }
+                read
+            }
+            Some(_) => {
+                self.problems
+                    .refuse(&here, "must be an array of transitions, in priority order");
+                Vec::new()
+            }
+        }
+    }
+
+    /// A transition at `at`: its guard, `when`, and the state of its
+    /// region it goes to, `to`, which `targets` gathers to be checked once
+    /// the region's states are read (94, 95, S20).
+    fn transition(&mut self, transition: &Table, at: &str, targets: &mut Targets) -> Transition {
+        let when = match transition.get("when") {
+            None => {
+                self.problems.refuse(
+                    &field(at, "when"),
+                    "is missing, and a transition has a guard",
+                );
+                Guard::Always(false)
+            }
+            Some(guard) => read_guard(guard, &field(at, "when"), self.problems),
+        };
+        let to = match transition.get("to") {
+            None => {
+                self.problems.refuse(
+                    &field(at, "to"),
+                    "is missing, and a transition names the state it goes to",
+                );
+                String::new()
+            }
+            Some(Value::String(to)) if !to.is_empty() => {
+                targets.to.push((field(at, "to"), to.clone()));
+                to.clone()
+            }
+            Some(_) => {
+                self.problems.refuse(
+                    &field(at, "to"),
+                    "must be a non-empty string naming a state of its region",
+                );
+                String::new()
+            }
+        };
+        Transition {
+            when,
+            to,
+            effects: Vec::new(),
+            bump: None,
+            enter: BTreeMap::new(),
+            sections: unnamed(transition, &TRANSITION_FIELDS),
         }
     }
 

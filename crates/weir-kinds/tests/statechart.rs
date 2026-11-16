@@ -386,3 +386,179 @@ regions.checks.states.lint.final = true
         ["kinds.persona.regions.main.states.build.regions.checks.initial"]
     );
 }
+
+// A transition goes to a state its region holds.
+
+#[test]
+fn a_transition_to_a_state_its_region_does_not_hold() {
+    let refusal = refused(&PERSONA.replace(
+        r#"{ when = { final = "passed" }, to = "passed" }"#,
+        r#"{ when = { final = "passed" }, to = "tested" }"#,
+    ));
+    assert_eq!(
+        fields(&refusal),
+        ["kinds.persona.regions.stages.states.test.transitions[0].to"]
+    );
+    assert!(refusal.problems[0].reason.contains("`tested`"), "{refusal}");
+}
+
+#[test]
+fn a_transition_with_no_guard_or_target() {
+    let refusal = refused(
+        r#"
+[kinds.persona]
+title = "Persona test"
+regions.main.initial = "a"
+regions.main.states.b.final = true
+
+[kinds.persona.regions.main.states.a]
+transitions = [{ to = "b" }, { when = { always = true } }]
+"#,
+    );
+    assert_eq!(
+        fields(&refusal),
+        [
+            "kinds.persona.regions.main.states.a.transitions[0].when",
+            "kinds.persona.regions.main.states.a.transitions[1].to",
+        ]
+    );
+}
+
+/// A statechart kind `guards` whose one state `a` has a transition to
+/// itself for each of `guards`, in order.
+fn guarded(guards: &[&str]) -> String {
+    let transitions: Vec<String> = guards
+        .iter()
+        .map(|guard| format!("  {{ when = {guard}, to = \"a\" }},"))
+        .collect();
+    format!(
+        "[kinds.guards]\ntitle = \"Guards\"\nregions.main.initial = \"a\"\n\n\
+         [kinds.guards.regions.main.states.a]\ntransitions = [\n{}\n]\n",
+        transitions.join("\n")
+    )
+}
+
+// A guard is one of the forms C.4 names.
+
+#[test]
+fn every_form_of_guard_reads() {
+    use std::time::Duration;
+    use weir_kinds::toml::Value;
+    use weir_kinds::weir_engine::{ChildrenTest, Guard, Test};
+
+    let text = guarded(&[
+        r#"{ all = [{ always = true }] }"#,
+        r#"{ any = [{ response = "yes" }] }"#,
+        r#"{ not = { final = "done" } }"#,
+        r#"{ ev = "switch", is = "up" }"#,
+        r#"{ ev = "n", in = [1, 2] }"#,
+        r#"{ ev = "lock", exists = false }"#,
+        r#"{ ev = "n", gt = 1 }"#,
+        r#"{ ev = "n", gte = 1 }"#,
+        r#"{ ev = "n", lt = 1 }"#,
+        r#"{ ev = "n", lte = 1 }"#,
+        r#"{ ev = "seen", older = "2h" }"#,
+        r#"{ ev = "a", eq_ev = "b" }"#,
+        r#"{ ev = "a", ne_ev = "b" }"#,
+        r#"{ ev = "a", gt_ev = "b" }"#,
+        r#"{ ev = "a", gte_ev = "b" }"#,
+        r#"{ ev = "a", lt_ev = "b" }"#,
+        r#"{ region = { name = "lamp", in = ["on"] } }"#,
+        r#"{ parent = { in = ["open"] } }"#,
+        r#"{ children = { kind = "task", all = ["done"] } }"#,
+        r#"{ children = { kind = "task", count_gte = 2 } }"#,
+    ]);
+    let evidence = |ev: &str, test: Test| Guard::Evidence {
+        ev: ev.to_owned(),
+        test,
+    };
+    let one = Value::Integer(1);
+    let read: Vec<Guard> = statechart(&text, "guards").statechart.regions["main"].states["a"]
+        .transitions
+        .iter()
+        .map(|transition| transition.when.clone())
+        .collect();
+    assert_eq!(
+        read,
+        [
+            Guard::All(vec![Guard::Always(true)]),
+            Guard::Any(vec![Guard::Response("yes".to_owned())]),
+            Guard::Not(Box::new(Guard::Final("done".to_owned()))),
+            evidence("switch", Test::Is(Value::String("up".to_owned()))),
+            evidence("n", Test::In(vec![one.clone(), Value::Integer(2)])),
+            evidence("lock", Test::Exists(false)),
+            evidence("n", Test::Gt(one.clone())),
+            evidence("n", Test::Gte(one.clone())),
+            evidence("n", Test::Lt(one.clone())),
+            evidence("n", Test::Lte(one)),
+            evidence("seen", Test::Older(Duration::from_secs(2 * 3600))),
+            evidence("a", Test::EqEv("b".to_owned())),
+            evidence("a", Test::NeEv("b".to_owned())),
+            evidence("a", Test::GtEv("b".to_owned())),
+            evidence("a", Test::GteEv("b".to_owned())),
+            evidence("a", Test::LtEv("b".to_owned())),
+            Guard::Region {
+                name: "lamp".to_owned(),
+                within: vec!["on".to_owned()],
+            },
+            Guard::Parent {
+                within: vec!["open".to_owned()],
+            },
+            Guard::Children {
+                kind: "task".to_owned(),
+                test: ChildrenTest::All(vec!["done".to_owned()]),
+            },
+            Guard::Children {
+                kind: "task".to_owned(),
+                test: ChildrenTest::CountGte(2),
+            },
+        ]
+    );
+}
+
+// A guard of no form is refused naming its path.
+
+#[test]
+fn a_guard_of_a_form_the_format_does_not_name() {
+    let refusal = refused(&guarded(&[
+        r#"{ ev = "switch" }"#,
+        r#"{ ev = "n", is = 1, gt = 2 }"#,
+        r#"{ all = [{ always = true }], any = [{ always = true }] }"#,
+        r#"{ always = true, response = "yes" }"#,
+        r#"{ children = { kind = "task" } }"#,
+        r#""always""#,
+        r#"{ any = [{ always = true }, { when = 1 }] }"#,
+    ]));
+    let at = "kinds.guards.regions.main.states.a.transitions";
+    assert_eq!(
+        fields(&refusal),
+        [
+            format!("{at}[0].when"),
+            format!("{at}[1].when"),
+            format!("{at}[2].when"),
+            format!("{at}[3].when"),
+            format!("{at}[4].when"),
+            format!("{at}[5].when"),
+            format!("{at}[6].when.any[1]"),
+        ]
+    );
+    for problem in &refusal.problems {
+        assert!(
+            problem
+                .reason
+                .contains("is not a guard of a form the format names"),
+            "{problem}"
+        );
+    }
+}
+
+// An older is a duration.
+
+#[test]
+fn an_older_that_is_no_duration() {
+    let refusal = refused(&guarded(&[r#"{ ev = "seen", older = "2 days" }"#]));
+    assert_eq!(
+        fields(&refusal),
+        ["kinds.guards.regions.main.states.a.transitions[0].when.older"]
+    );
+}

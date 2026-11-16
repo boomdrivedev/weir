@@ -72,6 +72,7 @@
 mod deliverable;
 mod elaboration;
 mod fields;
+mod guard;
 mod hash;
 mod identity;
 mod kinds;
