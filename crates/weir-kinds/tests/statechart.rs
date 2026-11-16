@@ -675,3 +675,192 @@ fn a_statechart_reads_as_written() {
         assert!(state.regions.is_empty());
     }
 }
+
+// A state's params read the stage template's parameters.
+
+#[test]
+fn a_states_params_read_as_the_stage_templates() {
+    use weir_kinds::{Deliverable, Join, ParamAgents, Params};
+
+    let declaration = reads(&format!(
+        "{PERSONA}\n{}",
+        r#"
+[kinds.mover]
+title = "Mover"
+regions.main.initial = "move"
+regions.main.states.fix.final = true
+
+[kinds.mover.regions.main.states.move]
+machine = "command"
+params = { command = ["bin/move"], deliverables = ["commits"], on_fail = "fix", max_send_backs = 3 }
+"#
+    ));
+    let persona = &declaration.statecharts["persona"];
+    assert_eq!(
+        persona.params.keys().collect::<Vec<_>>(),
+        ["stages.build", "stages.test"]
+    );
+    assert_eq!(
+        persona.params["stages.build"],
+        Params {
+            agents: Some(ParamAgents::Entries(vec![table("model = \"opus\"")])),
+            join: Some(Join::All),
+            on_fail: Some("build".to_owned()),
+            max_send_backs: Some(2),
+            deliverables: Some(vec![Deliverable::Commits]),
+        }
+    );
+    assert_eq!(
+        persona.params["stages.test"],
+        Params {
+            agents: Some(ParamAgents::Rule {
+                rule: "every-persona-definition".to_owned(),
+                pattern: Some("personas/*.md".to_owned()),
+            }),
+            join: Some(Join::All),
+            on_fail: Some("build".to_owned()),
+            max_send_backs: Some(2),
+            deliverables: Some(vec![Deliverable::Committed("tests/personas.md".to_owned())]),
+        }
+    );
+    let mover = &declaration.statecharts["mover"];
+    assert_eq!(
+        mover.params["main.move"],
+        Params {
+            agents: None,
+            join: None,
+            on_fail: Some("fix".to_owned()),
+            max_send_backs: Some(3),
+            deliverables: Some(vec![Deliverable::Commits]),
+        }
+    );
+    let state = &mover.statechart.regions["main"].states["move"];
+    assert_eq!(
+        state.params.as_ref().unwrap()["command"],
+        table("command = [\"bin/move\"]")["command"]
+    );
+}
+
+/// A statechart kind whose one region `main` holds the final state `done`
+/// and, for each of `params`, a state `s<n>` giving it.
+fn with_params(params: &[&str]) -> String {
+    let mut text = "[kinds.p]\ntitle = \"Params\"\nregions.main.initial = \"done\"\n\
+                    regions.main.states.done.final = true\n"
+        .to_owned();
+    for (n, params) in params.iter().enumerate() {
+        text.push_str(&format!("regions.main.states.s{n}.params = {params}\n"));
+    }
+    text
+}
+
+// A join is all, any or a count.
+
+#[test]
+fn a_join_of_all_any_or_a_count() {
+    use weir_kinds::Join;
+
+    let p = statechart(
+        &with_params(&[r#"{ join = "any" }"#, r#"{ join = "count:3" }"#]),
+        "p",
+    );
+    assert_eq!(p.params["main.s0"].join, Some(Join::Any));
+    assert_eq!(p.params["main.s1"].join, Some(Join::Count(3)));
+    assert_eq!(Join::Count(3).to_string(), "count:3");
+    assert_eq!(Join::All.to_string(), "all");
+    assert_eq!(Join::Any.to_string(), "any");
+
+    let refusal = refused(&with_params(&[
+        r#"{ join = "count:0" }"#,
+        r#"{ join = "count:03" }"#,
+        r#"{ join = "most" }"#,
+    ]));
+    assert_eq!(
+        fields(&refusal),
+        [
+            "kinds.p.regions.main.states.s0.params.join",
+            "kinds.p.regions.main.states.s1.params.join",
+            "kinds.p.regions.main.states.s2.params.join",
+        ]
+    );
+}
+
+// A state's deliverables are of the format's spellings.
+
+#[test]
+fn a_deliverable_in_params_not_of_the_forms() {
+    let refusal = refused(&with_params(&[
+        r#"{ deliverables = ["commits", "commit"] }"#,
+    ]));
+    assert_eq!(
+        fields(&refusal),
+        ["kinds.p.regions.main.states.s0.params.deliverables"]
+    );
+    let p = statechart(
+        &with_params(&[
+            r#"{ deliverables = ["commits", "tasks"] }"#,
+            r#"{ deliverables = [] }"#,
+        ]),
+        "p",
+    );
+    assert_eq!(p.params["main.s0"].deliverables.as_ref().unwrap().len(), 2);
+    assert_eq!(p.params["main.s1"].deliverables, Some(Vec::new()));
+}
+
+// A send-back names a state of its region.
+
+#[test]
+fn a_send_back_to_no_state_of_its_region() {
+    let refusal = refused(&with_params(&[r#"{ on_fail = "nowhere" }"#]));
+    assert_eq!(
+        fields(&refusal),
+        ["kinds.p.regions.main.states.s0.params.on_fail"]
+    );
+    assert!(refusal.problems[0].reason.contains("nowhere"), "{refusal}");
+}
+
+// A state's agents are entries or a rule.
+
+#[test]
+fn an_agents_rule_of_the_wrong_shape() {
+    let refusal = refused(&with_params(&[
+        r#"{ agents = { pattern = "personas/*.md" } }"#,
+        r#"{ agents = { rule = "each", extra = 1 } }"#,
+    ]));
+    assert_eq!(
+        fields(&refusal),
+        [
+            "kinds.p.regions.main.states.s0.params.agents",
+            "kinds.p.regions.main.states.s1.params.agents",
+        ]
+    );
+}
+
+// Which templates and atoms there are is the reader's.
+
+#[test]
+fn any_template_or_atom_name_reads() {
+    use weir_kinds::weir_engine::Guard;
+
+    let anything = statechart(
+        r#"
+[kinds.anything]
+title = "Anything"
+regions.main.initial = "a"
+
+[kinds.anything.regions.main.states.a]
+machine = "anything"
+entry = [{ do = "something" }]
+transitions = [
+  { when = { ev = "whatever", exists = true }, to = "a" },
+  { when = { final = "inner.done" }, to = "a", enter = { inner = "elsewhere" } },
+]
+"#,
+        "anything",
+    );
+    let a = &anything.statechart.regions["main"].states["a"];
+    assert_eq!(a.machine.as_deref(), Some("anything"));
+    assert_eq!(a.entry[0].atom, "something");
+    assert!(matches!(&a.transitions[0].when, Guard::Evidence { ev, .. } if ev == "whatever"));
+    assert_eq!(a.transitions[1].when, Guard::Final("inner.done".to_owned()));
+    assert_eq!(a.transitions[1].enter["inner"], "elsewhere");
+}

@@ -169,6 +169,24 @@ pub enum Join {
     Count(u64),
 }
 
+impl Join {
+    /// The join a spelling names: `all`, `any` or `count:<n>`, `n` a whole
+    /// number of at least 1 in decimal digits with no leading zero (95).
+    fn from_spelling(spelling: &str) -> Option<Self> {
+        match spelling {
+            "all" => Some(Self::All),
+            "any" => Some(Self::Any),
+            _ => {
+                let n = spelling.strip_prefix("count:")?;
+                if n.is_empty() || n.starts_with('0') || !n.bytes().all(|b| b.is_ascii_digit()) {
+                    return None;
+                }
+                n.parse().ok().map(Self::Count)
+            }
+        }
+    }
+}
+
 impl fmt::Display for Join {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -422,7 +440,11 @@ impl Walk<'_> {
         let machine = self.name(state, "machine", at);
         let params = match state.get("params") {
             None => None,
-            Some(Value::Table(params)) => Some(params.clone()),
+            Some(Value::Table(params)) => {
+                let read = self.stage_params(params, &field(at, "params"), targets);
+                self.params.insert(path.to_owned(), read);
+                Some(params.clone())
+            }
             Some(_) => {
                 self.problems.refuse(
                     &field(at, "params"),
@@ -445,6 +467,92 @@ impl Walk<'_> {
             regions,
             transitions,
             sections: unnamed(state, &STATE_FIELDS),
+        }
+    }
+
+    /// The stage template's parameters a state's `params` at `at` gives,
+    /// read whatever its `machine` names, its `on_fail` gathered in
+    /// `targets`; every other key is a template's own, left as written in
+    /// the state (94, 95, 98; C.4).
+    fn stage_params(&mut self, params: &Table, at: &str, targets: &mut Targets) -> Params {
+        let agents = params.get("agents").and_then(|agents| {
+            let read = match agents {
+                Value::Array(items) => items
+                    .iter()
+                    .map(|item| item.as_table().cloned())
+                    .collect::<Option<Vec<_>>>()
+                    .map(ParamAgents::Entries),
+                Value::Table(rule) => agents_rule(rule),
+                _ => None,
+            };
+            if read.is_none() {
+                self.problems.refuse(
+                    &field(at, "agents"),
+                    "must be an array of tables, one per agent, or a table holding `rule`, a non-empty string, and, where given, `pattern`, a string, and no other key",
+                );
+            }
+            read
+        });
+        let join = params.get("join").and_then(|join| {
+            let read = join.as_str().and_then(Join::from_spelling);
+            if read.is_none() {
+                let reason = match join.as_str() {
+                    Some(text) => format!(
+                        "`{text}` is not all, any or count:<n>, n a whole number of at least 1 with no leading zero"
+                    ),
+                    None => "must be all, any or count:<n> written as a string".to_owned(),
+                };
+                self.problems.refuse(&field(at, "join"), reason);
+            }
+            read
+        });
+        let on_fail = match params.get("on_fail") {
+            None => None,
+            Some(Value::String(target)) if !target.is_empty() => {
+                targets.on_fail.push((field(at, "on_fail"), target.clone()));
+                Some(target.clone())
+            }
+            Some(_) => {
+                self.problems.refuse(
+                    &field(at, "on_fail"),
+                    "must be the name of a state of its region",
+                );
+                None
+            }
+        };
+        let max_send_backs = match params.get("max_send_backs") {
+            None => None,
+            Some(Value::Integer(times)) if *times >= 0 => Some(times.unsigned_abs()),
+            Some(_) => {
+                self.problems.refuse(
+                    &field(at, "max_send_backs"),
+                    "must be an integer of at least 0",
+                );
+                None
+            }
+        };
+        let deliverables = params.get("deliverables").and_then(|deliverables| {
+            let read = match deliverables
+                .as_array()
+                .and_then(|items| items.iter().map(Value::as_str).collect::<Option<Vec<_>>>())
+            {
+                None => Err("must be an array of strings".to_owned()),
+                Some(spellings) => spellings
+                    .into_iter()
+                    .map(Deliverable::from_spelling)
+                    .collect::<Result<Vec<_>, _>>(),
+            };
+            read.map_err(|reason| {
+                self.problems.refuse(&field(at, "deliverables"), reason);
+            })
+            .ok()
+        });
+        Params {
+            agents,
+            join,
+            on_fail,
+            max_send_backs,
+            deliverables,
         }
     }
 
@@ -670,6 +778,26 @@ struct Targets {
     to: Vec<(String, String)>,
     /// Each state's `params.on_fail`, in state order.
     on_fail: Vec<(String, String)>,
+}
+
+/// A state's `params.agents` given as a rule: `rule`, a non-empty string,
+/// and, where given, `pattern`, a string, and no other key (C.4).
+fn agents_rule(table: &Table) -> Option<ParamAgents> {
+    if table.keys().any(|key| key != "rule" && key != "pattern") {
+        return None;
+    }
+    let rule = table
+        .get("rule")?
+        .as_str()
+        .filter(|rule| !rule.is_empty())?;
+    let pattern = match table.get("pattern") {
+        None => None,
+        Some(pattern) => Some(pattern.as_str()?.to_owned()),
+    };
+    Some(ParamAgents::Rule {
+        rule: rule.to_owned(),
+        pattern,
+    })
 }
 
 /// A table's entries in name order, whatever order the table keeps, so
