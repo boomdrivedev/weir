@@ -1,0 +1,28 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+# weir-engine: a statechart's types, which weir-kinds reads a statechart
+# kind into (94, C.4; section 9). One task per check (core.39), each
+# declaring everything it reads (kit:testing.3).
+language: 'rust'
+
+tasks:
+  format:
+    command: 'cargo fmt -p weir-engine --check'
+    inputs: ['/crates/weir-engine/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    tags: [check-fast]
+    options: {runFromWorkspaceRoot: true}
+  lint:
+    command: 'cargo clippy -p weir-engine --all-targets -- -D warnings'
+    inputs: ['/crates/weir-engine/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    tags: [check-fast]
+    options: {runFromWorkspaceRoot: true}
+  typecheck:
+    command: 'cargo check -p weir-engine --all-targets'
+    inputs: ['/crates/weir-engine/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    tags: [check-fast]
+    options: {runFromWorkspaceRoot: true}
+  test:
+    command: 'cargo test -p weir-engine'
+    inputs: ['/crates/weir-engine/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    tags: [check-fast]
+    options: {runFromWorkspaceRoot: true}

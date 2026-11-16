@@ -10,6 +10,9 @@ toml.workspace = true
 # weir's one sha256, through which a package's content hash is computed
 # (90, C.4; core.44).
 weir-capture = { path = "../weir-capture" }
+# The engine's types, which a statechart kind is read into (81, C.4;
+# section 9), re-exported whole.
+weir-engine = { path = "../weir-engine" }
 
 [dev-dependencies]
 serde.workspace = true

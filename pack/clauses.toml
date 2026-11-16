@@ -2,8 +2,9 @@
 # it stands in, as the pack's check reads them (67; C.7). Numbers only,
 # never a clause's words (core.37): the statement is in boomdrivedev/blueprints,
 # and a clause it adds, removes or renumbers is changed here in the change
-# that follows it. 94 to 99, statechart kinds and the engine, stay out until
-# weir's statechart change takes them in with their cases.
+# that follows it. 94 and 95, statechart kinds, stand under A.8 with the
+# kind format's other clauses; 96 to 99, the engine, stay out until the
+# change that brings the engine's tick takes them in with their cases.
 statement = "boomdrivedev/blueprints:design/weir/requirements.md"
 commit = "006fc34"
 
@@ -37,7 +38,7 @@ clauses = [44, 45, 46, 47, 48, 49, 50]
 
 [[section]]
 name = "A.8"
-clauses = [51, 52, 53, 54, 55, 56, 57, 58, 88, 89, 90, 91]
+clauses = [51, 52, 53, 54, 55, 56, 57, 58, 88, 89, 90, 91, 94, 95]
 
 [[section]]
 name = "A.9"

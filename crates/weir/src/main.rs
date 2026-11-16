@@ -1,9 +1,9 @@
 //! The `weir` command line: the caller that runs the crates, holding no
 //! rule of its own (section 9; core.1). `weir check <declaration>` reads a
-//! declaration of kinds (51 to 58). `weir capture folder` and `weir
-//! capture meeting` run the built-in adapters as a host runs any adapter,
-//! with the arguments a host appends, `--raw-dir <dir>` and `--cursor <c>`,
-//! and print their lines (C.1; core.34). `weir import signals` prints the
+//! declaration of kinds, simple and statechart (51 to 58, 94, 95). `weir
+//! capture folder` and `weir capture meeting` run the built-in adapters as
+//! a host runs any adapter, with the arguments a host appends, `--raw-dir
+//! <dir>` and `--cursor <c>`, and print their lines (C.1; core.34). `weir import signals` prints the
 //! import lines of a body read before its inbox existed, for a host's
 //! import operation, and names on standard error what it could not carry
 //! (63, 75a). What it says of the body comes from the crate that reads it
@@ -19,7 +19,7 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 use weir_adapters::{folder, meeting, signals_folder};
 use weir_capture::{ImportLine, Line};
-use weir_kinds::{read_elaboration, read_kinds, End, Problem};
+use weir_kinds::{read_elaboration, read_kinds, End, Problem, StatechartKind};
 use weir_pack::Pack;
 
 fn usage() -> String {
@@ -49,7 +49,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Read a declaration of kinds, its elaboration sections included, and
-    /// list its kinds, or name every field that fails it (51 to 58).
+    /// list its kinds of both formats, simple and statechart, in name order,
+    /// or name every field that fails it (51 to 58, 94, 95).
     Check {
         /// The declaration's file, which is read and never written (58).
         declaration: PathBuf,
@@ -122,20 +123,34 @@ fn check(path: &Path) -> ExitCode {
     }
 }
 
-/// A declaration's kinds in name order, each `<name>@<version>` with a line
-/// per stage, or the line `  lands with no stages` for a kind that lands
-/// declaring none (51), below it `  landing fix <identity>` where the kind
-/// names its landing fix, the identity as written, and
-/// `  landing fixes at most <n>` where it names how many it runs, neither
-/// where left out (52; record 0005), and one
-/// line for an elaboration kind's ending; or every
-/// problem of the kinds and of their elaboration sections, gathered into
-/// one refusal (57, 81).
+/// A declaration's kinds of both formats in name order (51, 81). A simple
+/// kind is `<name>@<version>` with a line per stage, or the line
+/// `  lands with no stages` for a kind that lands declaring none (51), below
+/// it `  landing fix <identity>` where the kind names its landing fix, the
+/// identity as written, and `  landing fixes at most <n>` where it names how
+/// many it runs, neither where left out (52; record 0005), and one line for
+/// an elaboration kind's ending. A statechart kind is `<name>@<version>`,
+/// `  title <title>`, its landing fix lines as a simple kind's, and a line
+/// per region in name order,
+/// `  region <region> from <initial>: <state>, <state> (final), …`, its
+/// states in name order, each final state marked, a state's own regions
+/// not listed (94). Or every problem of the kinds and of their elaboration
+/// sections, gathered into one refusal (57, 81).
 fn listing(text: &str) -> Result<Vec<String>, Vec<Problem>> {
     let declaration = read_kinds(text).map_err(|refusal| refusal.problems)?;
     let mut lines = Vec::new();
     let mut problems = Vec::new();
-    for kind in declaration.kinds.values() {
+    let mut names: Vec<&String> = declaration
+        .kinds
+        .keys()
+        .chain(declaration.statecharts.keys())
+        .collect();
+    names.sort();
+    for name in names {
+        let Some(kind) = declaration.kinds.get(name) else {
+            lines.extend(statechart_listing(&declaration.statecharts[name]));
+            continue;
+        };
         lines.push(format!("{}@{}", kind.name, kind.version));
         if kind.stages.is_empty() {
             lines.push("  lands with no stages".to_owned());
@@ -166,6 +181,41 @@ fn listing(text: &str) -> Result<Vec<String>, Vec<Problem>> {
     } else {
         Err(problems)
     }
+}
+
+/// A statechart kind's lines: its name and version, its title, its
+/// landing fix and its bound where it names them, and each region with its
+/// initial state and its states (94).
+fn statechart_listing(kind: &StatechartKind) -> Vec<String> {
+    let mut lines = vec![
+        format!("{}@{}", kind.name(), kind.version()),
+        format!("  title {}", kind.title),
+    ];
+    if let Some(landing_fix) = &kind.landing_fix {
+        lines.push(format!("  landing fix {landing_fix}"));
+    }
+    if let Some(times) = kind.max_landing_fixes {
+        lines.push(format!("  landing fixes at most {times}"));
+    }
+    for (name, region) in &kind.statechart.regions {
+        let states: Vec<String> = region
+            .states
+            .iter()
+            .map(|(state, read)| {
+                if read.is_final {
+                    format!("{state} (final)")
+                } else {
+                    state.clone()
+                }
+            })
+            .collect();
+        lines.push(format!(
+            "  region {name} from {}: {}",
+            region.initial,
+            states.join(", ")
+        ));
+    }
+    lines
 }
 
 /// A built-in adapter's run: its path, then the options a host appends.
