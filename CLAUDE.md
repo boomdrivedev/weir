@@ -55,13 +55,14 @@ Every tool runs through the shell, one command at a time:
 
 | layer | what | how long |
 |---|---|---|
-| `check-fast` | format (treefmt), a new place's first commit through the hooks, the Rust toolchain's pin, and the specs, through `openspec validate --strict` | seconds |
+| `check-fast` | format (treefmt), a new place's first commit through the hooks, the Rust toolchain's pin, the specs, through `openspec validate --strict`, and each open change as it would archive, with the check's cases (core.59) | seconds |
 
 `devenv shell -- check-fast` runs them (`moon run :#check-fast`);
-`devenv shell -- moon run root:format`, `hooks`, `toolchain` and
-`specs` run one each. Each crate brings its cargo tests and lint as a
-moon project of its own. No task reads a Markdown file of the tree's
-own but OpenSpec's validation of the specs (core.39).
+`devenv shell -- moon run root:format`, `hooks`, `toolchain`, `specs`,
+`changes` and `changes-cases` run one each. Each crate brings its cargo
+tests and lint as a moon project of its own. No task reads a Markdown
+file of the tree's own but OpenSpec's validation of the specs and of
+each open change as it would archive (core.39, core.59).
 
 ## Claude Code
 
