@@ -1,0 +1,100 @@
+# Every field of a statechart kind: a title, label, branch, landing,
+# landing fix and its bound; a state's own regions, a decision, entry and
+# exit effects, machine, params and enter; transitions with effects, a
+# bump and an enter; every form of guard; and a `doc` returned unread (94;
+# C.4).
+satisfies = [94]
+declaration = """
+[kinds.release]
+version = 3
+title = "Release"
+label = "construction"
+branch = "release"
+lands = true
+landing_fix = "acme/fix@1"
+max_landing_fixes = 2
+doc = "Ships a release; words for a person, which change nothing."
+
+[kinds.release.regions.main]
+initial = "build"
+
+[kinds.release.regions.main.states.build]
+machine = "stage"
+params = { agents = [{ model = "opus" }, { model = "sonnet" }], join = "count:2", on_fail = "build", max_send_backs = 1, deliverables = ["commits", "report:notes/build.md"], timeout = "1h" }
+enter = { inner = "start" }
+entry = [{ do = "light", args = { level = 3 } }]
+exit = [{ do = "dim", note = "softly" }]
+transitions = [
+  { when = { all = [{ always = true }, { not = { final = "failed" } }] }, to = "check", effects = [{ do = "notify", args = { who = "owner" } }], bump = "builds", enter = { checks = "lint" } },
+  { when = { any = [{ ev = "switch", is = "up" }, { ev = "n", in = [1, 2] }, { ev = "lock", exists = false }] }, to = "check" },
+  { when = { any = [{ ev = "n", gt = 1 }, { ev = "n", gte = 1 }, { ev = "n", lt = 1 }, { ev = "n", lte = 1 }] }, to = "waiting" },
+  { when = { any = [{ ev = "seen", older = "2h" }, { ev = "a", eq_ev = "b" }, { ev = "a", ne_ev = "b" }] }, to = "waiting" },
+  { when = { any = [{ ev = "a", gt_ev = "b" }, { ev = "a", gte_ev = "b" }, { ev = "a", lt_ev = "b" }] }, to = "waiting" },
+]
+
+[kinds.release.regions.main.states.check]
+transitions = [
+  { when = { region = { name = "checks", in = ["done"] } }, to = "shipped" },
+  { when = { parent = { in = ["open"] } }, to = "shipped" },
+  { when = { children = { kind = "task", all = ["done"] } }, to = "shipped" },
+  { when = { children = { kind = "task", any = ["done"] } }, to = "waiting" },
+  { when = { children = { kind = "task", none = ["failed"] } }, to = "waiting" },
+  { when = { children = { kind = "task", count_gte = 2 } }, to = "waiting" },
+]
+
+[kinds.release.regions.main.states.check.regions.checks]
+initial = "lint"
+
+[kinds.release.regions.main.states.check.regions.checks.states.lint]
+params = { deliverables = ["tasks"] }
+transitions = [{ when = { always = true }, to = "done" }]
+
+[kinds.release.regions.main.states.check.regions.checks.states.done]
+final = true
+
+[kinds.release.regions.main.states.waiting]
+decision = { kind = "stalled", answers = ["retry", "ship"], shows = ["log"], doc = "asks once" }
+transitions = [
+  { when = { response = "retry" }, to = "build" },
+  { when = { response = "ship" }, to = "shipped" },
+]
+
+[kinds.release.regions.main.states.shipped]
+final = true
+"""
+
+[expect.statecharts.release]
+version = 3
+title = "Release"
+label = "construction"
+landing_fix = "acme/fix@1"
+max_landing_fixes = 2
+unread = ["doc"]
+
+[expect.statecharts.release.regions.main]
+initial = "build"
+states.build = { machine = "stage", to = [
+  "check",
+  "check",
+  "waiting",
+  "waiting",
+  "waiting",
+] }
+states.shipped = { final = true }
+states.waiting = { answers = ["retry", "ship"], to = ["build", "shipped"] }
+
+[expect.statecharts.release.regions.main.states.check]
+to = ["shipped", "shipped", "shipped", "waiting", "waiting", "waiting"]
+regions.checks.initial = "lint"
+regions.checks.states.lint = { to = ["done"] }
+regions.checks.states.done = { final = true }
+
+[expect.statecharts.release.params."main.build"]
+agents = "entries 2"
+join = "count:2"
+on_fail = "build"
+max_send_backs = 1
+deliverables = ["commits", "report:notes/build.md"]
+
+[expect.statecharts.release.params."main.check.checks.lint"]
+deliverables = ["tasks"]

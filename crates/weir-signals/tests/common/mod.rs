@@ -100,13 +100,14 @@ pub fn empty() -> InboxAt {
 }
 
 /// `inbox` with the capture `key` taken, unread, and read into `n`
-/// signals, the excerpt of each a line of its one raw file.
+/// signals, the excerpt of each a line of its one raw file, `notes.md`, at
+/// that line.
 pub fn with_signals(inbox: &InboxAt, key_text: &str, n: usize) -> InboxAt {
     with_read(inbox, capture(key_text), n)
 }
 
 /// `inbox` with `taken` taken, unread, and read into `n` signals, the
-/// excerpt of each a line of its one raw file.
+/// excerpt of each a line of its one raw file, `notes.md`, at that line.
 pub fn with_read(inbox: &InboxAt, taken: Capture, n: usize) -> InboxAt {
     let key_text = taken.key.to_string();
     let key_text = key_text.as_str();
@@ -126,16 +127,16 @@ pub fn with_read(inbox: &InboxAt, taken: Capture, n: usize) -> InboxAt {
         path: "notes.md".into(),
         bytes: lines.join("\n").into_bytes(),
     };
-    let reading: Vec<ReadSignal> = lines
-        .iter()
-        .map(|line| ReadSignal {
+    let reading: Vec<ReadSignal> = (1..)
+        .zip(&lines)
+        .map(|(n, line)| ReadSignal {
             kind: "ask".into(),
             asserted_by: "upstream".into(),
             assertion: format!("{line}, asserted"),
             subjects: Vec::new(),
             argues_with: Vec::new(),
             excerpt: line.clone(),
-            position: "the notes".into(),
+            position: format!("notes.md:{n}"),
         })
         .collect();
     let write = inbox
