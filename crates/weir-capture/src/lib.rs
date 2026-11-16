@@ -48,6 +48,6 @@ pub use line::{read_line, Completion, Excerpt, Failure, Line, Malformed, Nature,
 pub use rec::{RecError, Record};
 pub use take::{
     read_report, take, Bank, Inbox, OwnSignal, RawFile, Refusal, Refused, Report, ReportError,
-    Take, TakeError, Taken, REPORT_FORMAT,
+    RuleMove, RuleOutcome, Take, TakeError, Taken, REPORT_FORMAT,
 };
 pub use weir_policy::Facts;

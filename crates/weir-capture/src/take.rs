@@ -10,10 +10,12 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
+use jiff::tz::TimeZone;
 use serde::Serialize;
 use serde_json::{Map, Value};
 use time::format_description::well_known::Rfc3339;
 use time::{OffsetDateTime, UtcOffset};
+use weir_policy::{People, Policy, Priority};
 
 use crate::capture::{CameIn, Capture};
 use crate::cut::{cut, LeftOut, SMALLEST_LIMIT};
@@ -69,20 +71,48 @@ pub struct RawFile {
 }
 
 /// What one write hands the inbox: the capture, with its own signal when
-/// its offer carried an own excerpt (19).
+/// its offer carried an own excerpt or a rule matched it as it landed (19,
+/// 127), and the move of the rule its keeper's policy gave (126, 128).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Taken {
     pub capture: Capture,
     pub own_signal: Option<OwnSignal>,
+    /// The move of the first rule whose match held, written in the
+    /// capture's write, none where the take was given no policy or no rule
+    /// matched (126, 128; core.57).
+    pub rule_move: Option<RuleMove>,
+}
+
+/// A rule's move of its capture's own signal, `<key>#1`, by
+/// `rule:<rule>`, in no batch (128; core.57).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuleMove {
+    /// The rule's name.
+    pub rule: String,
+    pub outcome: RuleOutcome,
+}
+
+/// What a rule's move does (128).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RuleOutcome {
+    /// A join, for a rule that launches or gives a person's turn: into
+    /// the rule's current item at the tip the write lands on, or into the
+    /// item it makes under `item` where the rule has none (record 0010).
+    Join { priority: Priority, item: String },
+    /// A drop, with the rule's reason (30).
+    Drop { reason: String },
 }
 
 /// A capture's own signal, as `weir-signals` records it: every field as
-/// offered but its excerpt, which is the text as cut (20).
+/// offered but its excerpt, which is the text as cut (20); or a rule's own
+/// signal of a capture with no own excerpt, its capture's title, or its
+/// key, with no nature (127).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OwnSignal {
     /// `<key>#1` (27).
     pub signal: String,
-    pub kind: Nature,
+    /// None for an own signal a rule made (127).
+    pub kind: Option<Nature>,
     pub asserted_by: String,
     pub assertion: String,
     pub subjects: Vec<String>,
@@ -95,13 +125,27 @@ pub struct OwnSignal {
 }
 
 /// What the host hands taking: the machine taking, by its short hostname
-/// (17), when, the limit, and how the lines came in (22).
+/// (17), when, the limit, and how the lines came in (22); and, where it
+/// keeps one, its keeper's policy, its people list and the machine's time
+/// zone (126; core.14).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Take {
     machine: String,
     taken_at: String,
+    /// The taken-at time, the time a rule is read at (125).
+    taken_at_instant: jiff::Timestamp,
     limit: usize,
     came_in: CameIn,
+    keeper: Option<Keeper>,
+}
+
+/// A keeper's policy, the people list its facts are joined from, and the
+/// time zone a rule's window is read in (C.5, C.9).
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Keeper {
+    policy: Policy,
+    people: People,
+    zone: TimeZone,
 }
 
 /// Why a [`Take`] could not be made.
@@ -151,6 +195,9 @@ impl Take {
         if machine.is_empty() || machine.chars().any(|c| c == ':' || c.is_whitespace()) {
             return Err(TakeError::Machine(machine));
         }
+        let taken_at_instant =
+            jiff::Timestamp::new(taken_at.unix_timestamp(), taken_at.nanosecond() as i32)
+                .map_err(|error| TakeError::TakenAt(error.to_string()))?;
         let taken_at = taken_at
             .to_offset(UtcOffset::UTC)
             .format(&Rfc3339)
@@ -158,9 +205,25 @@ impl Take {
         Ok(Take {
             machine,
             taken_at,
+            taken_at_instant,
             limit,
             came_in,
+            keeper: None,
         })
+    }
+
+    /// The take, given its keeper's policy, the people list and the
+    /// machine's time zone, reads the policy in each capture's write (126;
+    /// core.57). A take given none reads no rule.
+    pub fn with_policy(self, policy: Policy, people: People, zone: TimeZone) -> Take {
+        Take {
+            keeper: Some(Keeper {
+                policy,
+                people,
+                zone,
+            }),
+            ..self
+        }
     }
 
     pub fn machine(&self) -> &str {
@@ -532,7 +595,7 @@ fn take_offer(
     };
     let own_signal = excerpt.map(|(excerpt, cut)| OwnSignal {
         signal: format!("{}#1", offer.key),
-        kind: excerpt.kind,
+        kind: Some(excerpt.kind),
         asserted_by: excerpt.asserted_by,
         assertion: excerpt.assertion,
         subjects: excerpt.subjects,
@@ -557,6 +620,7 @@ fn take_offer(
     let taken = Taken {
         capture,
         own_signal,
+        rule_move: None,
     };
     inbox.write(&taken).map_err(|refusal| {
         if taken.capture.pointer.is_some() {

@@ -95,6 +95,7 @@ fn the_fakes_record_every_call_in_order() {
             facts: Facts::new(),
         },
         own_signal: None,
+        rule_move: None,
     };
     inbox
         .refuse
@@ -522,7 +523,7 @@ fn a_releases_notes_as_its_own_excerpt() {
         written.own_signal,
         Some(OwnSignal {
             signal: "release/mise/2026.10.10#1".into(),
-            kind: Nature::Ask,
+            kind: Some(Nature::Ask),
             asserted_by: "jdx/mise".into(),
             assertion: "mise is released".into(),
             subjects: vec!["release".into(), "mise".into()],
@@ -532,6 +533,7 @@ fn a_releases_notes_as_its_own_excerpt() {
             cut: None,
         })
     );
+    assert_eq!(written.rule_move, None);
 }
 
 #[test]
