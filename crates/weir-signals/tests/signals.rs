@@ -7,7 +7,7 @@ mod common;
 use weir_capture::rec::{self, Record};
 use weir_capture::{CameIn, LeftOut, Nature, OwnSignal, RawFile, Taken};
 use weir_signals::signal::{signals_rec, EMPTY_READING};
-use weir_signals::{InboxAt, ReadSignal, Signal, SignalId};
+use weir_signals::{InboxAt, NotTaken, ReadSignal, Signal, SignalId};
 
 use common::{after, capture, empty, key, paths, recfix, recsel_value};
 
@@ -626,5 +626,115 @@ fn words_from_within_a_line() {
     assert_eq!(
         inbox.signal(&id("meeting/file/ab12#1")).unwrap().excerpt,
         words
+    );
+}
+
+/// The one signal not taken of a reading of `signal` alone of the meeting
+/// capture, handed `raw`, which the test expects refused.
+fn refused_alone(signal: ReadSignal, raw: &[RawFile]) -> NotTaken {
+    let refused = with_meeting()
+        .read_capture(&key("meeting/file/ab12"), &[signal], raw)
+        .unwrap_err();
+    assert_eq!(refused.0.len(), 1, "{refused}");
+    let not_taken = refused.0.into_iter().next().unwrap();
+    assert_eq!(not_taken.what, "meeting/file/ab12#1");
+    not_taken
+}
+
+/// The excerpt of the signal written by a reading of `signal` alone of the
+/// meeting capture, handed `raw`, which the test expects taken.
+fn taken_alone(signal: ReadSignal, raw: &[RawFile]) -> String {
+    let inbox = with_meeting();
+    let write = inbox
+        .read_capture(&key("meeting/file/ab12"), &[signal], raw)
+        .unwrap_or_else(|refused| panic!("{refused}"));
+    let inbox = after(&inbox, &write);
+    inbox
+        .signal(&id("meeting/file/ab12#1"))
+        .unwrap()
+        .excerpt
+        .clone()
+}
+
+/// Holds `not_taken` to naming `field`, with a reason holding `phrase`.
+fn names(not_taken: &NotTaken, field: &str, phrase: &str) {
+    assert_eq!(not_taken.field.as_deref(), Some(field), "{not_taken}");
+    assert!(not_taken.why.contains(phrase), "{not_taken}");
+}
+
+const SECOND_LINE: &str = "Ben: we pin mise until it is fixed.";
+
+#[test]
+fn a_position_naming_no_file_and_line() {
+    for position in ["the transcript", "transcript.txt", ":2"] {
+        let not_taken = refused_alone(read_signal(SECOND_LINE, position), &[transcript()]);
+        names(&not_taken, "position", "names no raw file and line");
+        assert!(
+            not_taken.why.contains(&format!("`{position}`")),
+            "{not_taken}"
+        );
+    }
+}
+
+#[test]
+fn a_line_spelled_otherwise() {
+    for position in [
+        "transcript.txt:0",
+        "transcript.txt:02",
+        "transcript.txt:+2",
+        "transcript.txt:2a",
+    ] {
+        let not_taken = refused_alone(read_signal(SECOND_LINE, position), &[transcript()]);
+        names(&not_taken, "position", "names no raw file and line");
+    }
+}
+
+#[test]
+fn a_position_naming_a_file_not_handed_in() {
+    let not_taken = refused_alone(read_signal(SECOND_LINE, "minutes.txt:1"), &[transcript()]);
+    names(
+        &not_taken,
+        "position",
+        "names `minutes.txt`, which is none of the capture's raw files",
+    );
+}
+
+#[test]
+fn a_line_past_the_files_end() {
+    let not_taken = refused_alone(
+        read_signal(SECOND_LINE, "transcript.txt:4"),
+        &[transcript()],
+    );
+    names(
+        &not_taken,
+        "position",
+        "names line 4, past the end of `transcript.txt`",
+    );
+}
+
+#[test]
+fn a_last_line_with_no_line_ending() {
+    let raw = RawFile {
+        path: "notes.md".into(),
+        bytes: b"first\nsecond".to_vec(),
+    };
+    assert_eq!(
+        taken_alone(read_signal("second", "notes.md:2"), &[raw]),
+        "second"
+    );
+}
+
+#[test]
+fn a_path_holding_a_colon() {
+    let raw = RawFile {
+        path: "meeting:12/transcript.txt".into(),
+        ..transcript()
+    };
+    assert_eq!(
+        taken_alone(
+            read_signal(SECOND_LINE, "meeting:12/transcript.txt:2"),
+            &[raw]
+        ),
+        SECOND_LINE
     );
 }
