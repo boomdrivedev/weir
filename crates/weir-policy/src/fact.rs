@@ -295,6 +295,56 @@ impl Facts {
     }
 }
 
+impl Facts {
+    /// The facts at rest: one text per value, `<name> <value as JSON>`, in
+    /// the names' order, each fact's values in the order given, each the
+    /// value of one `fact` field (C.2, C.9; record 0010).
+    pub fn to_fields(&self) -> Vec<String> {
+        self.facts
+            .iter()
+            .flat_map(|(name, values)| {
+                values
+                    .iter()
+                    .map(move |value| format!("{name} {}", value.to_json()))
+            })
+            .collect()
+    }
+
+    /// The stated facts `fact` fields hold, each `<name> <value as JSON>`,
+    /// a name's values gathered in the order written, so a fact of one
+    /// value and a list of one read back alike; a field of another shape is
+    /// refused naming `fact` (C.2, C.9; record 0010).
+    pub fn from_fields<'a>(fields: impl IntoIterator<Item = &'a str>) -> Result<Facts, FactError> {
+        let mut facts = Facts::new();
+        for field in fields {
+            let (name, value) = at_rest(field).ok_or_else(|| {
+                FactError::new(
+                    "fact",
+                    format!(
+                        "is `{field}`, not a stated fact's name, one blank and its value as \
+                         JSON: a text, a number, true or false, or a date"
+                    ),
+                )
+            })?;
+            facts.push(name, value);
+        }
+        Ok(facts)
+    }
+}
+
+/// The name and the value of one `fact` field, where it is of that shape.
+fn at_rest(field: &str) -> Option<(&str, Value)> {
+    let (name, json) = field.split_once(' ')?;
+    if sort(name) != Some(Sort::Stated) || OWN_FIELDS.contains(&name) {
+        return None;
+    }
+    if json.trim() != json {
+        return None;
+    }
+    let json: serde_json::Value = serde_json::from_str(json).ok()?;
+    Some((name, Value::from_json(&json)?))
+}
+
 impl Serialize for Facts {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.to_json().serialize(serializer)
