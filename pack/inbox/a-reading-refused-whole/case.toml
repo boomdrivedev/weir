@@ -13,7 +13,7 @@ assertion = "acme 1.1 brings the shim back."
 subjects = []
 argues_with = []
 excerpt = "The shim is back, behind a flag."
-position = "the notes, the first item"
+position = "raw/notes.md:3"
 
 [[operation.reading.signal]]
 kind = "constraint"
@@ -28,7 +28,7 @@ assertion = "Pinning is a bother."
 subjects = []
 argues_with = []
 excerpt = "Pin 1.0 to keep the old behaviour."
-position = "the notes, the second item"
+position = "raw/notes.md:4"
 
 [[refused]]
 what = "release/acme/1.1#2"
