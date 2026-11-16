@@ -1,3 +1,10 @@
+## Purpose
+
+`weir-policy`'s policy: a keeper's rules read and checked whole; a
+rule's match over facts and a capture's age; the policy read for a
+signal and for a capture as it lands; and a rule's item's name (122 to
+129; C.9; record 0011; core.57, core.58).
+
 ## ADDED Requirements
 
 ### Requirement: A policy is read whole and refused naming the field

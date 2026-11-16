@@ -1,3 +1,9 @@
+## Purpose
+
+`weir-policy`'s facts: a fact's names, values and sorts, in flight
+and at rest; the people list, read and checked whole; and the join of
+attendees and speakers from it (117 to 121; C.9; record 0011; core.56).
+
 ## ADDED Requirements
 
 ### Requirement: A fact is a name with one value or several
