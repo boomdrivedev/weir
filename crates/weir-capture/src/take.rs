@@ -552,6 +552,7 @@ fn take_offer(
         machine: how.machine.clone(),
         taken_at: how.taken_at.clone(),
         unread: own_signal.is_none(),
+        facts: offer.facts,
     };
     let taken = Taken {
         capture,
