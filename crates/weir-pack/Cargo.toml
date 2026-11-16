@@ -3,11 +3,15 @@ name = "weir-pack"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "The conformance pack: its cases built in, the check that every case cites a clause and every counted clause is cited, the adapter checks and the meeting checks, and the host cases read and compared with what a host reports and writes (statement 65 to 68, 87; C.7)."
+description = "The conformance pack: its cases built in, the check that every case cites a clause and every counted clause is cited, the adapter checks and the meeting checks, the host cases read and compared with what a host reports and writes, and the tick cases read by the kind format and ticked by weir's engine (statement 65 to 68, 87, 96 to 99; C.7)."
 
 [dependencies]
 weir-capture = { path = "../weir-capture" }
 weir-delivery = { path = "../weir-delivery" }
+# The tick cases' statecharts, read by the one parser of kinds (core.30,
+# core.54), and the engine they are ticked with (96 to 99; core.35).
+weir-kinds = { path = "../weir-kinds" }
+weir-engine = { path = "../weir-engine" }
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true

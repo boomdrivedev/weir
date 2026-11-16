@@ -1391,6 +1391,8 @@ dependencies = [
  "toml",
  "weir-capture",
  "weir-delivery",
+ "weir-engine",
+ "weir-kinds",
 ]
 
 [[package]]

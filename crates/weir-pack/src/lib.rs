@@ -4,7 +4,7 @@
 //! no network (65 to 68, 87; C.7).
 //!
 //! The crate holds the pack's files, built in, read the same way as a
-//! folder its caller names, one folder per case under each of the seven
+//! folder its caller names, one folder per case under each of the eight
 //! shapes C.7 names; the index of the statement's clause numbers the pack
 //! keeps; the pack's check, which fails when a case cites a number that
 //! names no clause or a counted clause is cited by no case (67); the adapter checks an adapter's lines must pass and the meeting

@@ -1,4 +1,4 @@
-//! The pack's check (67; S16): every case of each of the seven shapes cites
+//! The pack's check (67; S16): every case of each of the eight shapes cites
 //! the clauses it exercises, every number it cites names a clause of the
 //! index, and every counted clause, those of A.1 to A.10, of A.14 and 71,
 //! is cited by some case. It reads each case's `satisfies` alone, so a shape's

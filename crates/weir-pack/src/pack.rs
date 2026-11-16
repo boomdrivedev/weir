@@ -1,5 +1,5 @@
 //! The pack's files and its cases: one folder per case under
-//! `<shape>/<case>/`, the shapes the seven C.7 names (87; C.7). The pack is
+//! `<shape>/<case>/`, the shapes the eight C.7 names (87; C.7). The pack is
 //! read the same way whether it is the one built into the crate or a
 //! folder the caller names.
 
@@ -22,17 +22,19 @@ pub enum Shape {
     Branch,
     Inbox,
     Kinds,
+    Tick,
     Delivery,
 }
 
 impl Shape {
-    pub const ALL: [Shape; 7] = [
+    pub const ALL: [Shape; 8] = [
         Shape::Host,
         Shape::Adapter,
         Shape::Cadence,
         Shape::Branch,
         Shape::Inbox,
         Shape::Kinds,
+        Shape::Tick,
         Shape::Delivery,
     ];
 
@@ -45,6 +47,7 @@ impl Shape {
             Shape::Branch => "branch",
             Shape::Inbox => "inbox",
             Shape::Kinds => "kinds",
+            Shape::Tick => "tick",
             Shape::Delivery => "delivery",
         }
     }
