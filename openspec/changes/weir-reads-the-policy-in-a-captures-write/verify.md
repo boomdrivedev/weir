@@ -1,37 +1,46 @@
 # Verify
 
 The change weir-reads-the-policy-in-a-captures-write, on
-`change/weir-reads-the-policy-in-a-captures-write` at 5bb471c, holds:
-the whole checks pass, every task is ticked, and every requirement and
-scenario of its seven delta specs is met by the code and a test of the
-scenario's name, each of the 88 run and passed in the whole checks.
-`openspec validate weir-reads-the-policy-in-a-captures-write --strict`
-reads the change as valid.
+`change/weir-reads-the-policy-in-a-captures-write` at cc43e8f, cut from
+`bolt/weir-carries-the-release-chains-parts` and holding it at 8724254,
+holds: the whole checks pass, every task is ticked, and every
+requirement and scenario of its seven delta specs is met by the code and
+a test of the scenario's name, each of the 88 run and passed in the
+whole checks. `openspec validate weir-reads-the-policy-in-a-captures-write
+--strict` reads the change as valid, and archived in a copy of
+`openspec/`, it leaves all 32 specs reading strictly.
 
 ## The whole checks
 
 `devenv shell -- check-fast` (`moon run :#check-fast`), run once at
-5bb471c: 50 tasks completed, none failed, one from moon's cache.
-Ran and passed: `root:format`, `root:toolchain`, `root:hooks`,
-`root:openspec-claude`, `root:specs` (27 specs, `openspec validate
---strict`), and `format`, `lint`, `typecheck` and `test` of
-`adapters`, `bounded`, `branch`, `cadence`, `capture`, `delivery`,
-`kinds`, `pack`, `policy`, `signals` and `weir`. Taken from the cache,
-its inputs unchanged since a pass: `root:prose`. Every test ran passed;
-the one test not run, cadence's `report`, is ignored by design and run
-by the cases after it with `TZ` set.
+cc43e8f: 54 tasks completed, none failed, exit 0. Ran and passed:
+`root:format`, `root:toolchain`, `root:hooks`, `root:openspec-claude`,
+`root:prose`, `root:specs` (30 specs, `openspec validate --strict`), and
+`format`, `lint`, `typecheck` and `test` of `adapters`, `bounded`,
+`branch`, `cadence`, `capture`, `delivery`, `engine`, `kinds`, `policy`
+and `signals`, and `format`, `lint` and `typecheck` of `pack` and
+`weir`. Replayed from moon's cache, their inputs identical to a run that
+passed on this host: `pack:test` and `weir:test`. 981 tests passed, none
+failed; the one not run, cadence's `report`, is ignored by design and
+run by the cases after it with `TZ` set.
 
 ## Tasks
 
-All 22 tasks of `tasks.md` are ticked, 1.1, 2.1 to 2.9, 3.1 to 3.5,
-4.1 to 4.5, 5.1 and 6.1, and each test a task names is in the tree
-under that name. `crates/weir-policy` is a moon project of its own,
-`policy`, listed in `.moon/workspace.yml` with its four check-fast tasks
-(core.39); `capture` depends on it; and `capture`, `signals`,
-`adapters`, `pack`, `weir`, `delivery` and `kinds` read
+All 30 tasks of `tasks.md` are ticked: 1.1, 2.1 to 2.9, 3.1 to 3.5, 4.1
+to 4.5, 5.1, 6.1, 7.1 to 7.4 and 8.1 to 8.4, and each test a task names
+is in the tree under that name. `crates/weir-policy` is a moon project
+of its own, `policy`, listed in `.moon/workspace.yml` with its four
+check-fast tasks (core.39); `capture` depends on it; and `capture`,
+`signals`, `adapters`, `pack`, `weir`, `delivery` and `kinds` read
 `/crates/weir-policy/**/*` and `/crates/weir-cadence/**/*` among their
-inputs. The README's table and `Cargo.toml`'s members and list name the
-crate.
+inputs, `pack`, `kinds` and `weir` reading `weir-engine`'s beside them.
+The README's table and `Cargo.toml`'s members and list name the crate.
+
+The ids hold as 7.3 and 8.3 give them: no two rules of
+`docs/architecture/core.md` share an id, none is main's core.59, and no
+two records of `docs/adr/` share a number. This change's rules are
+core.56, core.57, core.58 and core.60, and its record is 0011,
+`proposed`, the construct stage's own choice.
 
 ## facts
 
@@ -65,7 +74,7 @@ crate.
 |---|---|---|
 | An offer carries a key, a source and an event time (modified) | A missing required field refuses the offer; An event time without its offset refuses the offer; The event time is kept as offered; An offer's facts are read; An offer stating a fact C.9 does not spell | `line.rs`'s `offer_fields` reads `facts` through `Facts::stated`, a refusal naming `facts.<name>` and the key; `line.rs`'s tests |
 
-The built-in adapters' offers state no fact (task 5.1, commit af7071d).
+The built-in adapters' offers state no fact (task 5.1).
 
 ## capture-take
 
@@ -86,15 +95,20 @@ The built-in adapters' offers state no fact (task 5.1, commit af7071d).
 | An own signal a rule made is its capture's title | A rule's signal whose excerpt is not the title; A signal of no nature with no rule's move | `tests/rules.rs` |
 | A rule's move stands once written, in no batch | A rule's move names its rule; A rule's move with no signal | `tests/rules.rs`: `by: rule:point-releases`, the taken-at time, no `batch`, the standing move |
 
+The base's reader's excerpt by its file and line stands beside a rule's
+own signal: `read_capture` checks a reader's excerpt through
+`stands.rs`, and `tests/signals.rs` holds `a_position_naming_no_file_and_line`
+beside this change's two (7.1).
+
 ## inbox-items
 
 | Requirement | Scenarios | Where it holds |
 |---|---|---|
 | A rule's item names its rule and its priority | A rule's item record; A rule's item with a rule and no priority; A closed_at on an item no rule made | `Item`'s `rule`, `priority` and `closed_at` after `named_at`; `tests/rules.rs` and `tests/items.rs` |
-| A rule's join goes into its current item | A patch release then another ten minutes later; A closed item takes no more joins; Two writers of one rule meet one item; A rule's item under a used name | `InboxAt::rule_item`, read by `write.rs` on the tip the write is formed against, so a replay finds it again; `tests/rules.rs` |
+| A rule's join goes into its current item | A patch release then another ten minutes later; A closed item takes no more joins; Two writers of one rule meet one item; A rule's item under a used name | `InboxAt::rule_item`, read by `write.rs`'s `rules_move` on the tip the write is formed against, so a replay finds it again; `tests/rules.rs` |
 
-Each modified requirement keeps every scenario the main spec holds, so
-archiving drops none.
+Each modified requirement keeps every scenario the main spec holds at
+8724254, the base's inbox-signals among them, so archiving drops none.
 
 ## The rules
 
@@ -111,7 +125,8 @@ archiving drops none.
   `InboxAt::take` in the capture's write, in no batch, its item found at
   the tip the write lands on.
 - `weir conform`'s seam gives a host no policy (C.7): neither the `weir`
-  crate nor the pack calls `with_policy`, and both pass unchanged.
+  crate nor the pack calls `with_policy`, and both pass, the pack's tick
+  cases among its own (8.1, 8.2).
 
 ## Findings
 
