@@ -5,11 +5,46 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use toml::Table;
-use weir_engine::Statechart;
+use toml::{Table, Value};
+use weir_engine::{Region, State, Statechart};
 
 use crate::deliverable::Deliverable;
+use crate::fields::{boolean, field, unnamed};
 use crate::identity::Identity;
+use crate::kinds::{read_branch, read_landing_fix, read_max_landing_fixes, read_version};
+use crate::refusal::Problems;
+
+/// The fields of a statechart kind the format names; every other key is a
+/// section (56, 94).
+const KIND_FIELDS: [&str; 8] = [
+    "version",
+    "title",
+    "label",
+    "branch",
+    "lands",
+    "landing_fix",
+    "max_landing_fixes",
+    "regions",
+];
+
+/// The fields of a region the format names (94, C.4).
+const REGION_FIELDS: [&str; 2] = ["initial", "states"];
+
+/// The fields of a state the format names (94, C.4).
+const STATE_FIELDS: [&str; 1] = ["final"];
+
+/// Why a statechart kind that does not land names no landing fix (94, 57;
+/// record 0005).
+const LANDING_FIX_NOT_LANDING: &str =
+    "is on a kind that does not land, and only a kind that lands names its landing fix";
+
+/// Why a statechart kind that does not land names no bound on its landing
+/// fixes (94, 57; record 0005).
+const MAX_LANDING_FIXES_NOT_LANDING: &str =
+    "is on a kind that does not land, and only a kind that lands names how many landing fixes it runs";
+
+/// Why a kind's table holding both `stages` and `regions` is refused (95).
+pub(crate) const STAGES_AND_REGIONS: &str = "is declared beside `stages`, and a kind's table holds stages for a simple kind or regions for a statechart kind, never both";
 
 /// A statechart kind: its statechart, in the engine's types, its name and
 /// version the kind's, and the fields of the kind the format names beside
@@ -121,4 +156,160 @@ impl fmt::Display for Join {
             Self::Count(n) => write!(f, "count:{n}"),
         }
     }
+}
+
+/// A statechart kind's table, `kinds.<name>` at `at`, holding `regions`
+/// and no `stages`, read into the engine's types and checked whole, every
+/// failing field refused by its path (81, 94, 95; C.4; core.54).
+pub(crate) fn read_statechart_kind(
+    name: &str,
+    kind: &Table,
+    at: &str,
+    problems: &mut Problems,
+) -> StatechartKind {
+    let mut walk = Walk {
+        problems,
+        params: BTreeMap::new(),
+    };
+    let version = read_version(kind, at, walk.problems);
+    let branch = read_branch(name, kind, at, walk.problems);
+    let title = walk.title(kind, at);
+    let label = walk.label(kind, at);
+    let before = walk.problems.len();
+    let lands = boolean(kind, "lands", at, walk.problems);
+    let lands_read = (walk.problems.len() == before).then_some(lands);
+    let regions = walk.regions(kind.get("regions"), &field(at, "regions"));
+    // Beside a `lands` the read refused, `lands` is named once, by its own
+    // field, and neither is judged against it (57).
+    let not_landing = lands_read == Some(false);
+    let landing_fix = read_landing_fix(
+        kind,
+        not_landing.then_some(LANDING_FIX_NOT_LANDING),
+        at,
+        walk.problems,
+    );
+    let max_landing_fixes = read_max_landing_fixes(
+        kind,
+        not_landing.then_some(MAX_LANDING_FIXES_NOT_LANDING),
+        at,
+        walk.problems,
+    );
+    StatechartKind {
+        statechart: Statechart {
+            name: name.to_owned(),
+            version,
+            regions,
+        },
+        title,
+        label,
+        branch,
+        lands,
+        landing_fix,
+        max_landing_fixes,
+        params: walk.params,
+        sections: unnamed(kind, &KIND_FIELDS),
+    }
+}
+
+/// One statechart kind's walk: the problems the declaration's read
+/// gathers, and the stage template's parameters of each state read so far,
+/// by its path.
+struct Walk<'a> {
+    problems: &'a mut Problems,
+    params: BTreeMap<String, Params>,
+}
+
+impl Walk<'_> {
+    /// The kind's `title`: a non-empty string it must hold (94).
+    fn title(&mut self, kind: &Table, at: &str) -> String {
+        match kind.get("title") {
+            Some(Value::String(title)) if !title.is_empty() => title.clone(),
+            None => {
+                self.problems.refuse(
+                    &field(at, "title"),
+                    "is missing, and a statechart kind holds its title, the words a person reads for it",
+                );
+                String::new()
+            }
+            Some(_) => {
+                self.problems
+                    .refuse(&field(at, "title"), "must be a non-empty string");
+                String::new()
+            }
+        }
+    }
+
+    /// The kind's `label`: a non-empty string; `None` when left out (94).
+    fn label(&mut self, kind: &Table, at: &str) -> Option<String> {
+        match kind.get("label")? {
+            Value::String(label) if !label.is_empty() => Some(label.clone()),
+            _ => {
+                self.problems
+                    .refuse(&field(at, "label"), "must be a non-empty string");
+                None
+            }
+        }
+    }
+
+    /// A statechart's `regions`, at `here`, by name in name order (94).
+    fn regions(&mut self, regions: Option<&Value>, here: &str) -> BTreeMap<String, Region> {
+        let mut read = BTreeMap::new();
+        let Some(Value::Table(regions)) = regions else {
+            return read;
+        };
+        for (name, region) in in_name_order(regions) {
+            let at = field(here, name);
+            if let Value::Table(region) = region {
+                read.insert(name.clone(), self.region(region, &at));
+            }
+        }
+        read
+    }
+
+    /// A region, `regions.<region>` at `at`: its initial state and its
+    /// states (94, C.4).
+    fn region(&mut self, region: &Table, at: &str) -> Region {
+        let initial = match region.get("initial") {
+            Some(Value::String(initial)) => initial.clone(),
+            _ => String::new(),
+        };
+        let mut states = BTreeMap::new();
+        if let Some(Value::Table(table)) = region.get("states") {
+            for (name, state) in in_name_order(table) {
+                if let Value::Table(state) = state {
+                    let at = field(&field(at, "states"), name);
+                    states.insert(name.clone(), self.state(state, &at));
+                }
+            }
+        }
+        Region {
+            initial,
+            states,
+            sections: unnamed(region, &REGION_FIELDS),
+        }
+    }
+
+    /// A state, `states.<state>` at `at` (94, C.4).
+    fn state(&mut self, state: &Table, at: &str) -> State {
+        State {
+            is_final: boolean(state, "final", at, self.problems),
+            decision: None,
+            entry: Vec::new(),
+            exit: Vec::new(),
+            machine: None,
+            params: None,
+            enter: BTreeMap::new(),
+            regions: BTreeMap::new(),
+            transitions: Vec::new(),
+            sections: unnamed(state, &STATE_FIELDS),
+        }
+    }
+}
+
+/// A table's entries in name order, whatever order the table keeps, so
+/// that a walk names its problems in one order (57).
+fn in_name_order(table: &Table) -> Vec<(&String, &Value)> {
+    let mut entries: Vec<_> = table.iter().collect();
+    entries.sort_by(|a, b| a.0.cmp(b.0));
+    entries
 }
