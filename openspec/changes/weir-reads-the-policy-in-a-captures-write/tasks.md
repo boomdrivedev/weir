@@ -17,7 +17,7 @@ repository's whole checks once every task is done.
 
 ## 1. Cadence names a window's close
 
-- [ ] 1.1 Make `Schedule::first_after` in `crates/weir-cadence/src/schedule.rs` public, its doc saying too that a rule's item is named for the first time its window names after the item's making (129; C.9). Add `the_first_time_after_an_instant`, `an_instant_on_a_named_time` and `a_schedule_that_names_no_later_time` to `crates/weir-cadence/tests/schedule.rs` (design 9; core.33). True when `devenv shell -- moon run cadence:test -- --test schedule` passes those three, holding the cadence scenarios of those names.
+- [x] 1.1 Make `Schedule::first_after` in `crates/weir-cadence/src/schedule.rs` public, its doc saying too that a rule's item is named for the first time its window names after the item's making (129; C.9). Add `the_first_time_after_an_instant`, `an_instant_on_a_named_time` and `a_schedule_that_names_no_later_time` to `crates/weir-cadence/tests/schedule.rs` (design 9; core.33). True when `devenv shell -- moon run cadence:test -- --test schedule` passes those three, holding the cadence scenarios of those names.
 
 ## 2. weir-policy
 
