@@ -166,7 +166,7 @@ impl<'a> Charts<'a> {
     pub fn region(&self, path: &str) -> Result<Found<'a>, Refusal> {
         let no_region = || Refusal::new(path, "names no region of the statechart");
         let segments: Vec<&str> = path.split('.').collect();
-        if segments.len() % 2 == 0 {
+        if segments.len().is_multiple_of(2) {
             return Err(no_region());
         }
         let mut found = Found {
