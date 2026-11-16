@@ -5,6 +5,7 @@ status: accepted
 date: 2026-11-07
 decision-makers:
 - the code stage of the chore weir-devenv-declares-its-mcp-servers
+- the code stage of the chore weirs-tasks-read-no-markdown
 ---
 
 # weir's devenv declares its MCP servers, writes Claude Code's files at a place's readiness, and holds OpenSpec's files to its pin
@@ -47,3 +48,28 @@ Option 1 of each.
 - The shell's `openspec` is 1.14.3, where a host's own may be later; a change validated in the shell is validated by the pinned release.
 - The tracked OpenSpec files are 1.14.3's, byte for byte sluice's.
 - boomdrive and flume hold their OpenSpec files to their pin by the release each skill names, sluice and weir by writing them afresh. That is one thing done two ways in the family, which sluice's record 0097 told the orchestrator for the family to settle on one.
+
+## Amendment, 2026-11-15: no task reads a Markdown file of the tree's, so a script writes OpenSpec's files and the shell holds no Vale
+
+Status: accepted on 2026-11-15. The direction is the family's principle 16, which decides it: the user's words of 2026-11-11, "We do not fucking write code tests against Markdown files.", and their answer of 2026-11-15, "OpenSpec's own validation stays; the rule is about checks of what pages say". The form below is the code stage of the chore weirs-tasks-read-no-markdown's own choice. It is cheap to change and holds no choice of the user's.
+
+Sources: the brief of the chore weirs-tasks-read-no-markdown, on the bolt weirs-checks-read-no-markdown; boomdrivedev/blueprints `design/principles.md`, principle 16, at `3a5c19d`; boomdrivedev/sluice's core.21 as amended at `4295ca8a`, the same rule in sluice; `moon.yml`, `devenv.nix`, `.vale.ini` and `styles/Weir` at `5e3f128`; rule core.39.
+
+### Context
+
+Principle 16 rules out any check, test or gate task in a kit that reads a Markdown file for what it says: a doc, a README, a skill, an instruction, a spec or a record. A tool's own validation of the files it works on stays. Two of weir's root tasks read its Markdown. `root:prose` ran Vale over the README against `styles/Weir`, and the shell's `prose` script ran the same by hand. `root:openspec-claude` compared the skills and commands under `.claude/` with what the pinned OpenSpec writes. `root:specs`, `openspec validate --strict`, is OpenSpec's own validation. The pack's Markdown files are cases' data, and the tests that write a README into a pack, an inbox or a scratch repository write data.
+
+### Decision outcome
+
+- **`root:prose` goes, and Vale with it.** The shell no longer pins Vale, the `prose` script is gone, and `.vale.ini` and `styles/Weir` leave the tree. The README is kept by the people and agents who write and review it.
+- **`root:openspec-claude` goes, and a script writes OpenSpec's files.** `write-openspec-claude.sh` refuses an `openspec` other than the release `devenv.nix` pins (core.40), has it write the ten workflows into a scratch directory under a configuration of its own, and replaces the tracked ones with them. Moving the pin is followed by `sh write-openspec-claude.sh` in the shell. No task runs it, and nothing compares the tracked files with what it writes.
+- **What stays.** `root:specs`, OpenSpec's validation of the specs; the pack's Markdown cases, which its tests compare byte for byte; the tests that write a README as data; treefmt's exclude of Markdown, which keeps every formatter off it.
+- **Not taken.**
+  - The `prose` script and Vale kept in the shell for a writer to run by hand. Principle 16 keeps what a page says with its writers and reviewers, never with code that greps it, and a script no task runs still greps it.
+  - No writer at all, the files written again by `openspec update`. That reads the user's own OpenSpec configuration, which must name the ten workflows, the reason this record took a configuration of its own.
+
+### Consequences
+
+- A skill or command under `.claude/` edited by hand, or left at an older pin, passes the gate. Moving the pin and running the script keeps them at the pin.
+- check-fast runs `format`, `toolchain`, `specs`, `hooks` and each crate's tasks. core.39 is amended in the same branch.
+- `root:specs` validates the specs alone. Principle 16 as amended 2026-11-15 names each open change too, validated as it would archive, which is a check of its own for a change to add.

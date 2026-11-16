@@ -5,20 +5,16 @@ _: {
 
   # What no formatter owns, each with its reason.
   settings.excludes = [
-    # Prose: the README is Vale's (`prose`), and no formatter here rewraps
-    # prose. OpenSpec's Claude Code skills and commands under .claude are
-    # kept as the pinned openspec writes them (`openspec-claude`, record
-    # 0005).
+    # Markdown: no formatter the gate runs reads it (core.39). OpenSpec's
+    # Claude Code skills and commands under .claude are kept as the pinned
+    # openspec writes them (`write-openspec-claude.sh`, record 0007).
     "*.md"
     # Written by cargo and devenv in their own layouts.
     "*.lock"
     # The license text, kept as issued.
     "LICENSE"
-    # Lists in gitignore syntax, Vale's own configuration and its word
-    # lists, which no formatter reads.
+    # A list in gitignore syntax, which no formatter reads.
     ".gitignore"
-    ".vale.ini"
-    "styles/config/vocabularies/**"
     # The pack's cases compare these byte for byte, so no formatter may
     # rewrite them: their lines and import lines, the records a case starts
     # from and the records it expects, the raw material a case hands a

@@ -20,6 +20,10 @@ user's decision of 2026-11-07, in their own words, which record 0005
 carries. A delivery follows the user's direction of 2026-11-08, in
 their own words, which record 0006 carries, and the statement's
 clauses 100 to 113 and C.8 it was written into at blueprints 006fc34.
+core.39's Markdown clause follows the family's principle 16, in
+boomdrivedev/blueprints `design/principles.md`, written from the user's
+words of 2026-11-11 and amended on their answer of 2026-11-15, which
+record 0007's amendment of 2026-11-15 carries.
 
 ## Rules
 
@@ -109,7 +113,7 @@ clauses 100 to 113 and C.8 it was written into at blueprints 006fc34.
 
 ### The gate
 
-- **[core.39]** Every file the tree tracks is owned by a formatter the gate runs, or is excluded by name with its reason; every language with a linter is linted; every crate is a moon project of its own, listed in `.moon/workspace.yml` with its language, whose check-fast tasks format, lint and test it, one task per check.
+- **[core.39]** Every file the tree tracks is owned by a formatter the gate runs, or is excluded by name with its reason; no task, test or formatter the gate runs reads a Markdown file of the tree's own to check what it says or how it is written, OpenSpec's validation of the specs aside; every language with a linter is linted; every crate is a moon project of its own, listed in `.moon/workspace.yml` with its language, whose check-fast tasks format, lint and test it, one task per check.
 - **[core.40]** Every tool a gate task runs is the version the tree pins, on every host that runs the gate.
 
 ## Details
@@ -159,7 +163,7 @@ clauses 100 to 113 and C.8 it was written into at blueprints 006fc34.
 - **core.36** Rules out: a profile merged with no pack run; a profile that relaxes a clause. Source: clauses 86, 87.
 - **core.37** Rules out: a comment or commit that reinterprets a clause; a behaviour the statement forbids kept behind a flag. Source: record 0001; `design/requirements-style.md`.
 - **core.38** Rules out: a pricing table, a tier name, a customer name in code, docs or the README. Source: record 0001; section 9.
-- **core.39** Rules out: a file type the formatter neither formats nor excludes; an exclude with no comment saying why; a crate with no project in `.moon/workspace.yml`; one task bundling several checks; a change whose only verification is a command run by hand. Source: the kit standard's code profile; timber's record 0008 as the family precedent; the user's rule on projects per part; record 0003.
+- **core.39** Rules out: a file type the formatter neither formats nor excludes; an exclude with no comment saying why; a crate with no project in `.moon/workspace.yml`; one task bundling several checks; a change whose only verification is a command run by hand; a task, a test or a formatter that reads the README, CLAUDE.md, a rule, a record, a skill or a command under `.claude/`, or a spec, for its prose, its words, its length or its form, or compares it with what a tool writes, `root:prose`'s Vale and `root:openspec-claude`'s comparison among them; Vale, or any other linter of prose, in the gate or the shell. Not ruled out: `openspec validate` of the specs, OpenSpec's own validation of the files it works on; a Markdown file that is a case's data, raw material, an input, a starting record or a tip the pack compares byte for byte, or a README a test writes into a pack, an inbox or a scratch repository; `write-openspec-claude.sh`, which writes OpenSpec's files and checks none. Source: the kit standard's code profile; timber's record 0008 as the family precedent; the user's rule on projects per part; record 0003; boomdrivedev/blueprints principle 16 (as amended 2026-11-15); record 0007 as amended 2026-11-15.
 - **core.40** Rules out: a tool a task finds outside its pin; `rust` or `moon` pinned in two files with no check that fails when they differ. Source: `.prototools`; timber's record 0008; record 0003.
 - **core.41** Rules out: a settings-only table refused for having no stage, or read as a kind; settings dropped because the kind they are given to is not in the declaration; a setting's key read, renamed or given a default; a table holding `agents` and `landing_fix` or `max_landing_fixes` read as settings, since each is a field the format names. Not ruled out: an `agents` table of the wrong shape refused naming the field (core.31). Source: clauses 52, 57 (as amended at blueprints 4d1f88b, 31f9f1c and 8eec6dd), 58; C.4 (as amended at blueprints 31f9f1c and 8eec6dd); flume's records 0017, 0056; record 0005.
 - **core.42** Rules out: `kinds."a/b"`, `kinds."review@2"`, `kinds."a.b"`, `kinds."a b"` or `kinds.""` read as a kind or as settings; a version of 0, a sign, a fraction or a leading zero; a source from outside spelled `repo`, `launch` or its reader's own tool's name; a tool's name written into `weir-kinds` as its source (core.2). Not ruled out: one source holding several versions of a name, each in a package of its own (S10). Source: clause 88 (as amended at blueprints 57a1ba9); section 3; C.4 (as amended at blueprints 361a599); S10; flume's record 0022; record 0004.
