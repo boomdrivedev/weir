@@ -261,6 +261,9 @@ fn a_join_that_makes_an_item() {
             made_by: MadeBy::Join,
             named_by: "curation".into(),
             named_at: CURATION_AT.into(),
+            rule: None,
+            priority: None,
+            closed_at: None,
         }
     );
     assert!(!item.is_sent());

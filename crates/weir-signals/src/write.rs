@@ -147,6 +147,9 @@ pub(crate) fn joined_item(join: &Move) -> Item {
         made_by: MadeBy::Join,
         named_by: join.by.clone(),
         named_at: join.at.clone(),
+        rule: None,
+        priority: None,
+        closed_at: None,
     }
 }
 
@@ -544,6 +547,9 @@ impl InboxAt {
             made_by: MadeBy::Conclusion(conclusion.to_string()),
             named_by: by.to_string(),
             named_at: at.to_string(),
+            rule: None,
+            priority: None,
+            closed_at: None,
         };
         let mut write = Write::new();
         write.put(

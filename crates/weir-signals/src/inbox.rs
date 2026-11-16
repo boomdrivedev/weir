@@ -607,6 +607,21 @@ impl InboxAt {
         Some(weight)
     }
 
+    /// The rule's current item: the item naming the rule `rule` with no
+    /// `closed_at`, or, where a write formed elsewhere left several, the
+    /// earliest by `named_at`, then by name (128; record 0010).
+    pub fn rule_item(&self, rule: &str) -> Option<&ItemAt> {
+        let named_at = |at: &ItemAt| OffsetDateTime::parse(&at.item.named_at, &Rfc3339).ok();
+        self.items
+            .values()
+            .filter(|at| at.item.rule.as_deref() == Some(rule) && at.item.closed_at.is_none())
+            .min_by(|a, b| {
+                named_at(a)
+                    .cmp(&named_at(b))
+                    .then_with(|| a.item.item.cmp(&b.item.item))
+            })
+    }
+
     /// The batch named `name`, as its file holds it.
     pub fn batch(&self, name: &str) -> Option<&Batch> {
         self.batches.get(name)

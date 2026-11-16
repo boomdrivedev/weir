@@ -290,6 +290,9 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
             made_by: MadeBy::Join,
             named_by: "curation".into(),
             named_at: AT.into(),
+            rule: None,
+            priority: None,
+            closed_at: None,
         }
     );
     let pin = read.item("pin-mise").unwrap();
