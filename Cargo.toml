@@ -36,6 +36,7 @@ members = [
   "crates/weir-pack",
   "crates/weir-delivery",
   "crates/weir-bounded",
+  "crates/weir-engine",
 ]
 
 [workspace.package]
