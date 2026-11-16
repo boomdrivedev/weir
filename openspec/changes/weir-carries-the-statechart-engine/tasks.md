@@ -65,4 +65,4 @@ repository's whole checks once every task is done.
 
 ## 8. The specs once archived
 
-- [ ] 8.1 Give `statechart-engine`'s and `tick-cases`' deltas each a `## Purpose` above `## ADDED Requirements`, saying what its capability is for, which `openspec archive` writes into the new capability's spec in place of its placeholder (verify.md's findings; core.39). True when, with this change archived, `devenv shell -- moon run root:specs` passes, with every one of weir's specs read strictly.
+- [x] 8.1 Give `statechart-engine`'s and `tick-cases`' deltas each a `## Purpose` above `## ADDED Requirements`, saying what its capability is for, which `openspec archive` writes into the new capability's spec in place of its placeholder (verify.md's findings; core.39). True when, with this change archived, `devenv shell -- moon run root:specs` passes, with every one of weir's specs read strictly.
