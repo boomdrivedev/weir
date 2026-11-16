@@ -17,6 +17,7 @@
 pub use toml;
 
 mod effect;
+mod eval;
 mod guard;
 mod refusal;
 mod snapshot;
