@@ -46,3 +46,7 @@ checks once every task is done.
 ## 6. The README
 
 - [x] 6.1 Add `weir-engine` to the README's crate table after `weir-kinds`, "A statechart's types, which `weir-kinds` reads a statechart kind into and the engine ticks", and have `weir-kinds`'s row name simple and statechart kinds. List `crates/weir-engine` in the comment over `Cargo.toml`'s `members` (design 14). True when `devenv shell -- moon run root:prose` passes.
+
+## 7. The specs once archived
+
+- [ ] 7.1 In this change's delta specs, bring `kinds`' modified *weir check reads a declaration* under 500 characters by listing a statechart kind in an added requirement of its own, *weir check lists a statechart kind*, which takes the scenario "A statechart kind is listed", the modified requirement keeping the main spec's five; and bring `conformance-pack`'s modified *The pack keeps an index of the statement's clauses* under 500 characters, 94 and 95 standing under A.8 as the section they stand in at blueprints 006fc34, its scenario kept (verify.md's findings; core.39). True when, with this change archived, `devenv shell -- moon run root:specs` passes, with every one of weir's specs read strictly.
