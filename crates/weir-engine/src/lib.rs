@@ -31,4 +31,4 @@ pub use refusal::Refusal;
 pub use snapshot::{Related, Response, Snapshot};
 pub use state::ObjectState;
 pub use statechart::{Region, State, Statechart, Transition};
-pub use tick::start;
+pub use tick::{start, tick, Applied, Fired, Phase, Planned, Tick};
