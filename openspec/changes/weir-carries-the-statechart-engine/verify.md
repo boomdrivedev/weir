@@ -1,62 +1,52 @@
 # Verify
 
 The change weir-carries-the-statechart-engine, on
-`change/weir-carries-the-statechart-engine` at 37ea815, is not archived.
-The whole checks pass, every task is ticked, and every requirement and
-scenario of its three delta specs is met by the code and a test; but
-archived as it stands, it fails `root:specs`: its two new capabilities,
-`statechart-engine` and `tick-cases`, carry no `## Purpose` in their
-delta specs, so `openspec archive` writes its placeholder into each new
-main spec, and `openspec validate --specs --strict` refuses both.
+`change/weir-carries-the-statechart-engine` at 3782e46, holds: the whole
+checks pass, all 26 tasks are ticked, every requirement and scenario of
+its three delta specs is met by the code and a test, and archived it
+leaves every one of weir's specs passing `root:specs`. It is archived
+with this report.
 
 ## The whole checks
 
 `devenv shell -- check-fast` (`moon run :#check-fast`), run once at
-37ea815, exit 0: 50 tasks completed, none failed. Taken from moon's
-cache, their inputs unchanged since they last passed: `root:hooks`,
-`root:openspec-claude`, `root:prose` and `root:specs`. Ran:
-`root:format`, `root:toolchain`, and `format`, `lint`, `typecheck` and
-`test` of every crate's project, `adapters`, `bounded`, `branch`,
-`cadence`, `capture`, `delivery`, `engine`, `kinds`, `pack`, `signals`
-and `weir`; `engine:test` passed 57 tests and `pack:test` 83.
-`root:prose` gave one suggestion and no warning: README line 33, the
-`weir-engine` row design 19 gives word for word, runs over 35 words.
+3782e46, exit 0: 50 tasks completed, none failed. `root:format` and
+`root:toolchain` ran; the other 48 replayed from moon's cache, their
+inputs unchanged since they last passed (`.moon/workspace.yml`): the
+`format`, `lint`, `typecheck` and `test` tasks of every crate's project,
+`adapters`, `bounded`, `branch`, `cadence`, `capture`, `delivery`,
+`engine`, `kinds`, `pack`, `signals` and `weir`, and `root:hooks`,
+`root:openspec-claude`, `root:prose` and `root:specs`. `engine:test`
+passed 57 tests and `pack:test` 83. `root:specs` passed 28 of 28.
+`root:prose` gave no error or warning and one suggestion, on README line
+33, the `weir-engine` row design 19 gives word for word.
 
 `root:specs` validates `openspec/specs` alone. The change itself,
-`openspec validate weir-carries-the-statechart-engine --strict`, is
-valid.
+`openspec validate weir-carries-the-statechart-engine --strict
+--no-interactive`, is valid.
 
 ## The archive
 
 In a copy of `openspec/`, `openspec archive
 weir-carries-the-statechart-engine -y` applied the deltas, 24 added and
-5 modified, and `openspec validate --specs --strict --no-interactive`,
-`root:specs`'s command, then passed 28 of 30:
-
-```
-✗ spec/statechart-engine
-  ⚠ [WARNING] overview: Purpose section is still a placeholder rather than a Purpose anyone wrote (the sentence `openspec archive` writes for a new capability, or a `TBD`/`TODO` marker left in its place). Replace it with what this capability is for, editing the main spec directly: a `## Purpose` in a delta is read only when the capability is created, so it cannot replace this one.
-✗ spec/tick-cases
-  ⚠ [WARNING] overview: Purpose section is still a placeholder rather than a Purpose anyone wrote (...)
-Totals: 28 passed, 2 failed (30 items)
-```
-
-Each new main spec reads `TBD - created by archiving change
-weir-carries-the-statechart-engine. Update Purpose after archive.` The
-change a-statechart-kind-is-read-in-weirs-kind-format, archived
-2026-11-16, opened its new capability's delta,
-`specs/statechart-kinds/spec.md`, with a `## Purpose` above `## ADDED
-Requirements`, which `openspec archive` carries into the new main spec.
-This change's `specs/statechart-engine/spec.md` and
-`specs/tick-cases/spec.md` open with `## ADDED Requirements`. The
-`conformance-pack` capability exists already, and merged it passes.
+5 modified: `conformance-pack` updated, `statechart-engine` and
+`tick-cases` created, each new spec opening with the `## Purpose` its
+delta gives. `openspec validate --specs --strict --no-interactive`,
+`root:specs`'s command, then passed 30 of 30.
 
 ## Tasks
 
-All 25 tasks of `tasks.md` are ticked, 1.1 and 1.2, 2.1 and 2.2, 3.1 to
-3.7, 4.1, 5.1 to 5.5, 6.1 to 6.7 and 7.1, and each test a task names is
-in the tree under that name and passed. No task asks for the deltas'
-Purpose.
+All 26 tasks of `tasks.md` are ticked, 1.1 and 1.2, 2.1 and 2.2, 3.1 to
+3.7, 4.1, 5.1 to 5.5, 6.1 to 6.7, 7.1 and 8.1. Each test a task names
+is in the tree under that name and passed. Every scenario of the three
+deltas has a test of its name in snake case but three, which their
+tasks hold by other names: "The index read" by `clauses.rs`'s
+`the_index_holds_every_clause_under_its_section` (6.5), "The sections
+the check counts" by `the_check_counts_a1_to_a10_a13_a14_and_71` (6.5),
+and "An answer matched by its pattern" by `src/eval.rs`'s matcher unit
+tests (3.1), `<text>` among them. 1.1's bolt branch,
+`origin/bolt/weir-carries-the-release-chains-parts`, is merged into
+this one.
 
 ## statechart-engine
 
@@ -132,11 +122,4 @@ The tests are `crates/weir-pack/tests/`'s.
 
 ## Findings
 
-1. The deltas `specs/statechart-engine/spec.md` and
-   `specs/tick-cases/spec.md` each lack a `## Purpose` above `## ADDED
-   Requirements`, so archiving the change writes `TBD` into
-   `openspec/specs/statechart-engine/spec.md` and
-   `openspec/specs/tick-cases/spec.md`, and `root:specs` fails 28 of
-   30. Each delta needs a Purpose saying what its capability is for, as
-   `statechart-kinds`' delta did; then the change archives with
-   `root:specs` passing.
+None. The change archives with `root:specs` passing.
