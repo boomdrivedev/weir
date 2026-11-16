@@ -1,0 +1,22 @@
+# A signal whose excerpt stands in the raw file its position names, but
+# begins on another line than the one it names, is refused naming its
+# excerpt: the notes' fourth line, named as their third.
+satisfies = [26]
+
+[operation.reading]
+key = "release/acme/1.1"
+raw = ["raw/notes.md"]
+
+[[operation.reading.signal]]
+kind = "constraint"
+asserted_by = "acme"
+assertion = "Keeping the old behaviour means pinning 1.0."
+subjects = []
+argues_with = []
+excerpt = "Pin 1.0 to keep the old behaviour."
+position = "raw/notes.md:3"
+
+[[refused]]
+what = "release/acme/1.1#1"
+field = "excerpt"
+reason_holds = "as one run beginning on line 3"

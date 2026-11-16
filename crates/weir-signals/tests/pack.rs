@@ -460,6 +460,8 @@ fn the_cases_named_are_among_them() {
         "a-reading-written-whole",
         "a-second-reading-refused",
         "an-excerpt-standing-nowhere-refused",
+        "an-excerpt-on-another-line-refused",
+        "a-position-naming-no-file-and-line-refused",
         "a-drop-with-its-reason",
         "an-answered-with-what-settled-it",
         "a-challenge-with-its-claim",
