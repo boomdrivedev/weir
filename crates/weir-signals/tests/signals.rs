@@ -360,7 +360,9 @@ fn transcript() -> RawFile {
     }
 }
 
-fn read_signal(excerpt: &str) -> ReadSignal {
+/// A reader's signal of `excerpt`, at `position`, which names a raw file
+/// and the line the excerpt begins on as `<path>:<line>` (core.16).
+fn read_signal(excerpt: &str, position: &str) -> ReadSignal {
     ReadSignal {
         kind: "constraint".into(),
         asserted_by: "Ben".into(),
@@ -368,7 +370,7 @@ fn read_signal(excerpt: &str) -> ReadSignal {
         subjects: vec!["mise".into()],
         argues_with: Vec::new(),
         excerpt: excerpt.into(),
-        position: "the transcript".into(),
+        position: position.into(),
     }
 }
 
@@ -389,9 +391,9 @@ fn three_signals_read() {
     let inbox = with_meeting();
     let key = key("meeting/file/ab12");
     let reading = [
-        read_signal("the shim times out on the first run."),
-        read_signal("we pin mise until it is fixed."),
-        read_signal("we ask upstream for a release."),
+        read_signal("the shim times out on the first run.", "transcript.txt:1"),
+        read_signal("we pin mise until it is fixed.", "transcript.txt:2"),
+        read_signal("we ask upstream for a release.", "transcript.txt:3"),
     ];
     let write = inbox.read_capture(&key, &reading, &[transcript()]).unwrap();
     assert_eq!(
@@ -446,7 +448,10 @@ fn a_gap_in_the_numbers() {
 fn a_second_reading() {
     let inbox = with_meeting();
     let key = key("meeting/file/ab12");
-    let first = [read_signal("we pin mise until it is fixed.")];
+    let first = [read_signal(
+        "we pin mise until it is fixed.",
+        "transcript.txt:2",
+    )];
     let write = inbox.read_capture(&key, &first, &[transcript()]).unwrap();
     let inbox = after(&inbox, &write);
     let refused = inbox
@@ -500,12 +505,12 @@ fn one_bad_signal_of_three() {
     let inbox = with_meeting();
     let key = key("meeting/file/ab12");
     let reading = [
-        read_signal("the shim times out on the first run."),
+        read_signal("the shim times out on the first run.", "transcript.txt:1"),
         ReadSignal {
             asserted_by: String::new(),
-            ..read_signal("we pin mise until it is fixed.")
+            ..read_signal("we pin mise until it is fixed.", "transcript.txt:2")
         },
-        read_signal("we ask upstream for a release."),
+        read_signal("we ask upstream for a release.", "transcript.txt:3"),
     ];
     let refused = inbox
         .read_capture(&key, &reading, &[transcript()])
@@ -517,10 +522,10 @@ fn one_bad_signal_of_three() {
     let reading = [
         ReadSignal {
             kind: "complaint".into(),
-            ..read_signal("the shim times out on the first run.")
+            ..read_signal("the shim times out on the first run.", "transcript.txt:1")
         },
-        read_signal("we pin mise until it is fixed."),
-        read_signal("we ask for nothing."),
+        read_signal("we pin mise until it is fixed.", "transcript.txt:2"),
+        read_signal("we ask for nothing.", "transcript.txt:3"),
     ];
     let refused = inbox
         .read_capture(&key, &reading, &[transcript()])
@@ -545,7 +550,10 @@ fn a_paraphrase() {
     let refused = inbox
         .read_capture(
             &key("meeting/file/ab12"),
-            &[read_signal("we pin mise until it gets fixed.")],
+            &[read_signal(
+                "we pin mise until it gets fixed.",
+                "transcript.txt:2",
+            )],
             &[transcript()],
         )
         .unwrap_err();
@@ -555,7 +563,10 @@ fn a_paraphrase() {
     assert!(inbox
         .read_capture(
             &key("meeting/file/ab12"),
-            &[read_signal("we pin mise until it is fixed.")],
+            &[read_signal(
+                "we pin mise until it is fixed.",
+                "transcript.txt:2"
+            )],
             &[],
         )
         .is_err());
@@ -573,7 +584,7 @@ fn verbatim_across_lines() {
     let write = inbox
         .read_capture(
             &key("meeting/file/ab12"),
-            &[read_signal(two_lines)],
+            &[read_signal(two_lines, "transcript.txt:2")],
             &[notes, transcript()],
         )
         .unwrap();
