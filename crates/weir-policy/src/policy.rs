@@ -8,7 +8,8 @@
 
 use std::fmt;
 
-use jiff::SignedDuration;
+use jiff::tz::TimeZone;
+use jiff::{SignedDuration, Timestamp};
 use serde_json::Number;
 use toml::{Table, Value as Toml};
 use weir_cadence::Schedule;
@@ -209,6 +210,22 @@ impl Match {
             }
             Match::Older(span) => age.is_some_and(|age| age > span.duration()),
         }
+    }
+}
+
+impl Rule {
+    /// The name of an item the rule makes at `made_at` (128; C.9):
+    /// `<rule>-<time>`, the time the first its window names after
+    /// `made_at`, read in `zone`, or `made_at` itself for a rule with no
+    /// window or a window that names no later time, written in UTC as
+    /// `YYYYMMDDTHHMMSSZ` (C.5; record 0010).
+    pub fn item_name(&self, made_at: Timestamp, zone: &TimeZone) -> String {
+        let close = self
+            .window
+            .as_ref()
+            .and_then(|window| window.first_after(made_at, zone))
+            .map_or(made_at, |close| close.timestamp());
+        format!("{}-{}", self.name, close.strftime("%Y%m%dT%H%M%SZ"))
     }
 }
 
