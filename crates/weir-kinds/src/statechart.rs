@@ -200,6 +200,15 @@ impl fmt::Display for Join {
 /// A statechart kind's table, `kinds.<name>` at `at`, holding `regions`
 /// and no `stages`, read into the engine's types and checked whole, every
 /// failing field refused by its path (81, 94, 95; C.4; core.54).
+///
+/// The walk names its problems in one order (57): the kind's `version`,
+/// `branch`, `title`, `label` and `lands`, its regions in name order, then
+/// its `landing_fix` and `max_landing_fixes`. In a region, its key, its
+/// `initial`'s shape and its states in name order; in a state, its key,
+/// `final`, `decision`, `entry`, `exit`, `machine`, `params`, `enter`, its
+/// own regions and its transitions in order. Once a region's states are
+/// read, its `initial`, each transition's `to` and each state's
+/// `params.on_fail` are checked against them, in state order.
 pub(crate) fn read_statechart_kind(
     name: &str,
     kind: &Table,

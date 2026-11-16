@@ -864,3 +864,84 @@ transitions = [
     assert_eq!(a.transitions[1].when, Guard::Final("inner.done".to_owned()));
     assert_eq!(a.transitions[1].enter["inner"], "elsewhere");
 }
+
+// A statechart kind is checked whole.
+
+#[test]
+fn a_statechart_kind_checked_whole() {
+    let refusal = refused(
+        r#"
+[[kinds.tidy.stages]]
+name = "code"
+prompt = "prompts/code.md"
+deliverables = ["commits"]
+
+[kinds.persona]
+version = 0
+title = "Persona test"
+regions.a.initial = "x"
+regions.b.initial = "y"
+
+[kinds.persona.regions.b.states.s]
+final = "yes"
+params = { join = "most" }
+transitions = [{ when = { always = true }, to = "nowhere" }]
+"#,
+    );
+    let at = "kinds.persona";
+    assert_eq!(
+        fields(&refusal),
+        [
+            format!("{at}.version"),
+            format!("{at}.regions.a.states"),
+            format!("{at}.regions.b.states.s.final"),
+            format!("{at}.regions.b.states.s.params.join"),
+            format!("{at}.regions.b.initial"),
+            format!("{at}.regions.b.states.s.transitions[0].to"),
+        ]
+    );
+}
+
+// A kind's table holding regions is a statechart kind.
+
+#[test]
+fn a_statechart_kind_beside_a_simple_kind() {
+    use weir_kinds::{Deliverable, End, Join, ParamAgents};
+
+    let declaration = common::read("persona.toml").unwrap();
+    assert_eq!(common::read("persona.toml").unwrap(), declaration);
+    assert_eq!(declaration.kinds.keys().collect::<Vec<_>>(), ["bump"]);
+    let bump = &declaration.kinds["bump"];
+    assert_eq!(bump.version, 2);
+    let stages: Vec<(&str, &End)> = bump
+        .stages
+        .iter()
+        .map(|stage| (stage.name.as_str(), &stage.end))
+        .collect();
+    assert_eq!(
+        stages,
+        [
+            ("code", &End::Deliverable(Deliverable::Commits)),
+            ("review", &End::Conversation),
+        ]
+    );
+    assert_eq!(
+        declaration.statecharts.keys().collect::<Vec<_>>(),
+        ["persona"]
+    );
+    let persona = &declaration.statecharts["persona"];
+    assert_eq!(persona.version(), 1);
+    assert_eq!(persona.statechart.name, "persona");
+    assert_eq!(
+        persona.statechart.regions.keys().collect::<Vec<_>>(),
+        ["stages"]
+    );
+    let test = &persona.params["stages.test"];
+    assert!(matches!(
+        &test.agents,
+        Some(ParamAgents::Rule { rule, .. }) if rule == "every-persona-definition"
+    ));
+    assert_eq!(test.join, Some(Join::All));
+    assert!(declaration.settings.is_empty());
+    assert!(declaration.sections.is_empty());
+}
