@@ -27,6 +27,7 @@ pub mod compare;
 pub mod delivery;
 pub mod host;
 pub mod pack;
+pub mod tick;
 
 pub use adapter::{check_lines, check_meeting_lines, Breach, Meetings, RawPlace};
 pub use adapter_case::{
@@ -43,3 +44,4 @@ pub use host::{
     read_host_case, Expected, ExpectedRefusal, ExpectedRun, HostCase, Invocation, Offered, Step,
 };
 pub use pack::{Case, Pack, Shape};
+pub use tick::{read_tick_case, TickCase};
