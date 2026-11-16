@@ -1,0 +1,21 @@
+# A conversation that hibernates, a stage delivering commits that does
+# not, and a conversation that declares no `hibernate`, which is returned
+# left out (53, 56, 58; C.4 as amended at blueprints 30dce35).
+[kinds.talk]
+
+[[kinds.talk.stages]]
+name = "draft"
+prompt = "prompts/talk-draft.md"
+conversation = true
+hibernate = true
+
+[[kinds.talk.stages]]
+name = "code"
+prompt = "prompts/talk-code.md"
+deliverables = ["commits"]
+hibernate = false
+
+[[kinds.talk.stages]]
+name = "review"
+prompt = "prompts/talk-review.md"
+conversation = true

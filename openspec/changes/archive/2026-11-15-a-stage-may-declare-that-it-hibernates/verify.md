@@ -1,0 +1,71 @@
+# Verify
+
+The change a-stage-may-declare-that-it-hibernates, on
+`change/a-stage-may-declare-that-it-hibernates` at 0dfc4d2, holds: the
+whole checks pass, every task is ticked, and every requirement and
+scenario of its delta spec is met by the code and a test of the
+scenario's name.
+
+## The whole checks
+
+`devenv shell -- check-fast` (`moon run :#check-fast`), run once at
+0dfc4d2: exit 0, 46 tasks completed, none failed, 44 of them from moon's
+cache, their inputs identical to a run that passed on this host. Ran and
+passed: `root:format` (411 files, 0 changed) and `root:toolchain`
+(rustc, cargo, clippy-driver and rustfmt 1.98.1). From the cache:
+`root:hooks`, `root:openspec-claude`, `root:prose` (0 errors),
+`root:specs` (`openspec validate --strict`, 27 passed, 0 failed), and
+`format`, `lint`, `typecheck` and `test` of each of `adapters`,
+`bounded`, `branch`, `cadence`, `capture`, `delivery`, `kinds`, `pack`,
+`signals` and `weir`.
+
+## Tasks
+
+All 9 tasks of `tasks.md` are ticked, 1.1 to 1.6, 2.1, 2.2 and 3.1.
+Each test a task names is in the tree under that name and passed in the
+run above: `refuse`'s `every_other_shape_the_format_names_is_checked`
+(1.1) and `a_hibernate_of_the_wrong_shape` (1.5); `read`'s
+`a_stage_reads_whether_it_hibernates` (1.2), `any_stage_may_hibernate`
+(1.3) and `a_hibernate_on_a_kinds_table_is_a_section` (1.4); `pack`'s
+`a_case_whose_stage_differs_in_its_hibernate_is_named` (2.1) and
+`a_stage_that_hibernates_is_a_case_of_its_own` (2.2). 1.6's `kinds:lint`
+passed, `missing_docs` denied. 3.1's check, the change archived in a
+copy of `openspec/` and every spec then validated strictly, passed: 27
+passed, 0 failed, `spec/kinds` among them.
+
+## kinds
+
+| Requirement | Scenario | Where it holds |
+|---|---|---|
+| A stage reads whether it hibernates | A stage reads whether it hibernates | `Stage::hibernate: Option<bool>`, read last in `read_stage` through `fields::flag`; `STAGE_FIELDS` names `hibernate`, so it is never a section; `read.rs` with `hibernates.toml` gives `Some(true)`, `Some(false)` and `None`, every stage's `sections` empty |
+| Any stage may declare that it hibernates | Any stage may hibernate | `flag` is read on every stage, after `repeat`, against no other field; `read.rs` with `hibernate-on-any-stage.toml` reads a waiting conversation and a `tasks` stage repeating per task group, both `Some(true)` |
+| A hibernate on a kind's table is a section | A hibernate on a kind's table is a section | `KIND_FIELDS` and `DECLARING_FIELDS` do not name it; `read.rs` with `hibernate-on-a-kind.toml` gives the kind's `sections` equal to `hibernate = true` and `draft`'s `hibernate` `None` |
+| A stage's hibernate that is not a bool is refused | A hibernate of the wrong shape | `flag` refuses any other value naming the field, "must be true or false", and `boolean` is `flag(..).unwrap_or(false)`, so `wait`, `lands`, `starts_unready` and `transcripts` are refused in the same words; `refuse.rs` with `hibernate-shapes.toml` gives exactly the three `kinds.talk.stages[n].hibernate` problems in order, and `read` an `Err` |
+| The pack's kinds cases hold a stage that hibernates | A stage that hibernates is a case of its own | `pack/kinds/a-stage-that-hibernates/case.toml`, as design 5 writes it, citing 53 and 58; `pack.rs` reads its citations, the expected `Some(true)`, `Some(false)` and `None`, and no differences |
+| A case whose stage differs in its hibernate is named | A case whose stage differs in its hibernate is named | `ExpectStage::hibernate: Option<bool>`; `kind_differences` holds four-part stages, name, end, `repeat` and `hibernate`; `pack.rs`'s `wrong-hibernate` case gives the one difference the scenario names |
+| A declaration's kinds case gives each kind's version, stages and landing fix (modified) | A kind that names its fix, and one with stages that may not | the requirement adds a stage's `hibernate` where it declares one; its one scenario is the main spec's unchanged, held by `pack.rs`'s `a_kind_that_names_its_fix_and_one_with_stages_that_may_not`; every earlier kinds case, none declaring `hibernate`, still passes in `kinds:test` |
+
+The modified requirement keeps the one scenario the main spec holds, so
+archiving drops none.
+
+## The rules
+
+- core.2: no fixture, test, doc or case of the change names a tool; the
+  new case's kind is `talk`.
+- core.30: one reader of kinds; `hibernate` on a kind's table is
+  returned as a section, unread and unrefused.
+- core.31: a `hibernate` that is not a bool is refused naming the field,
+  and one left out is returned left out, as amended on this branch.
+- core.32: weir judges `hibernate` against nothing else of the stage,
+  and reads a left-out one as neither true nor false, as amended on this
+  branch.
+- core.35: the new case is one folder under `kinds` and cites 53 and
+  58; `pack/clauses.toml` is unchanged, 30dce35 adding no clause.
+- `crates/weir` is unchanged, as design 6 says: `weir check` lists no
+  stage's `hibernate`.
+
+## Findings
+
+None. The statement is cited at blueprints 30dce35, on the branch
+`design/a-stage-declares-it-hibernates`, unpushed, as the design's
+risks say.
