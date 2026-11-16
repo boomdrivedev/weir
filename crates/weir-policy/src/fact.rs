@@ -200,8 +200,9 @@ impl Facts {
             .map(|(name, values)| (name.as_str(), values.as_slice()))
     }
 
-    /// Adds `value` after the values of the fact `name`.
-    pub(crate) fn push(&mut self, name: &str, value: Value) {
+    /// Adds `value` after the values of the fact `name`, as a caller gives
+    /// the facts a match is read over.
+    pub fn push(&mut self, name: &str, value: Value) {
         self.facts.entry(name.to_string()).or_default().push(value);
     }
 

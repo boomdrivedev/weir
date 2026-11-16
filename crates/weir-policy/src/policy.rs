@@ -13,7 +13,7 @@ use serde_json::Number;
 use toml::{Table, Value as Toml};
 use weir_cadence::Schedule;
 
-use crate::fact::{sort, Value};
+use crate::fact::{sort, Facts, Value};
 use crate::people::{document, path, required_text, tables, text, unnamed, SettingsError};
 
 /// A keeper's rules for one inbox, in order (122).
@@ -177,6 +177,38 @@ impl Span {
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.text)
+    }
+}
+
+impl Match {
+    /// Whether the match holds over `facts` and a capture's age (123),
+    /// none where its event time cannot be read. A fact of several values
+    /// holds a comparison when any value does, and a fact absent holds no
+    /// `is`, `in` or `contains`; `contains` evens the case of both texts;
+    /// `older` holds when the age is past its span, strictly; an `all` of
+    /// none holds and an `any` of none does not (record 0010). It reads
+    /// nothing but its arguments (core.56).
+    pub fn holds(&self, facts: &Facts, age: Option<SignedDuration>) -> bool {
+        match self {
+            Match::All(matches) => matches.iter().all(|one| one.holds(facts, age)),
+            Match::Any(matches) => matches.iter().any(|one| one.holds(facts, age)),
+            Match::Not(one) => !one.holds(facts, age),
+            Match::Fact { name, test } => {
+                let values = facts.get(name).unwrap_or_default();
+                match test {
+                    Test::Is(value) => values.contains(value),
+                    Test::In(list) => values.iter().any(|value| list.contains(value)),
+                    Test::Exists(exists) => !values.is_empty() == *exists,
+                    Test::Contains(text) => {
+                        let text = text.to_lowercase();
+                        values.iter().any(|value| {
+                            matches!(value, Value::Text(held) if held.to_lowercase().contains(&text))
+                        })
+                    }
+                }
+            }
+            Match::Older(span) => age.is_some_and(|age| age > span.duration()),
+        }
     }
 }
 
