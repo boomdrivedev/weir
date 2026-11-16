@@ -7,7 +7,11 @@ The narrative is the statement in boomdrivedev/blueprints,
 enforces and never restates it. There are no area pages yet; a rule
 that binds only one crate moves to an area page when that crate
 exists. Every rule below is drawn from the statement the user ratified,
-or from an accepted record, and waits on no yes. core.53 comes from
+or from an accepted record, and waits on no yes, but core.16's reader's
+excerpt. That waits on the operator's yes to record 0010, which
+carries boomdrive-design's ruling, in boomdrivedev/millpond's core.1
+and core.21 at 75b0cea, that weir's one check takes a reading as
+millpond's statement 32 defines it. core.53 comes from
 record 0008, accepted by agentplot-design on 2026-11-12 as its own
 choice, which carries its ruling of 2026-11-10 that weir owns the code
 of the family's limit for a call to a remote, and the statement's 69,
@@ -49,7 +53,7 @@ clauses 100 to 113 and C.8 it was written into at blueprints 006fc34.
 
 ### Signals, moves and items
 
-- **[core.16]** A signal's excerpt stands verbatim in its capture's raw material or is the own excerpt as cut, or the signal is refused; an imported signal alone is exempt.
+- **[core.16]** A signal's excerpt stands verbatim in its capture's raw material or is the own excerpt as cut, or the signal is refused; an imported signal alone is exempt; a reader's excerpt stands only as one unbroken run of one raw file's text, `\r\n` evened to `\n`, beginning on the line of that file its position names as `<path>:<line>`, checked by one function in `weir-signals`.
 - **[core.17]** A signal's identity is `<key>#<n>` in reading order; a capture has at most one reading, written whole or refused whole naming each signal not taken.
 - **[core.18]** A signal has at most one standing move, a second is refused, only a replacement naming who replaced what changes it, and a move is one of the six with its consequence or is refused.
 - **[core.19]** A batch is written whole or refused whole, and while it is proposed its moves do not stand; an unmoved signal is never deleted, however old.
@@ -129,7 +133,7 @@ clauses 100 to 113 and C.8 it was written into at blueprints 006fc34.
 - **core.13** Rules out: `capture.rec` and `signals.rec` in two commits; a capture with an own excerpt marked unread; an own signal numbered other than 1. Source: clauses 19, 24; C.2.
 - **core.14** Rules out: a limit read from a host's configuration into a record's shape; a random id in a record; a locale-dependent rendering. Not ruled out: `taken_at`, `machine` and `came_in` (22). Source: clauses 22, 24, I8.
 - **core.15** Rules out: a run recorded as complete without a `done` line; a cursor kept from a failed run; a refusal dropped from the run record. Source: clauses 9, 23; C.1 step 7.
-- **core.16** Rules out: a signal whose excerpt is paraphrased; a signal taken whose excerpt is not found in the banked material. Not ruled out: an imported signal (37). Source: clauses 26, 37.
+- **core.16** Rules out: a signal whose excerpt is paraphrased; a signal taken whose excerpt is not found in the banked material; a reader's excerpt taken where it stands in another file or begins on another line than its position names, or runs across two files; whitespace or a letter's case evened, or a line ending evened other than `\r\n`; a reader's position taken in another spelling, or naming a file the writer did not hand in; a second verbatim check, in weir or in a host. Not ruled out: an imported signal (37); an own or imported signal's position in free text; an excerpt beginning inside its line; an excerpt written with the line endings its reader gave. Source: clauses 26, 37; boomdrivedev/millpond's statement 32 and 107 at blueprints 3a5c19d; millpond's core.1 and core.21 at 75b0cea; record 0010.
 - **core.17** Rules out: a second `signals.rec` reading; a signal numbered by hash or time; a reading partly written. Source: clauses 27, 28.
 - **core.18** Rules out: a move that overwrites another; a seventh word; a drop without a reason, a join without an item. Source: clauses 29, 30, 31, I6.
 - **core.19** Rules out: a batch half applied; a move counted standing while its batch is proposed; a purge of old unmoved signals. Source: clauses 32, 33.
