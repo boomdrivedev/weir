@@ -738,3 +738,81 @@ fn a_path_holding_a_colon() {
         SECOND_LINE
     );
 }
+
+/// Notes beside the transcript: two lines, each ended by `\n`.
+fn notes() -> RawFile {
+    RawFile {
+        path: "notes.md".into(),
+        bytes: b"## Notes\n- pin mise\n".to_vec(),
+    }
+}
+
+#[test]
+fn line_endings_evened() {
+    let crlf = RawFile {
+        bytes: TRANSCRIPT.replace('\n', "\r\n").into_bytes(),
+        ..transcript()
+    };
+    let two_lines = "Ben: we pin mise until it is fixed.\n\
+                     Ana: and we ask upstream for a release.\n";
+    assert_eq!(
+        taken_alone(read_signal(two_lines, "transcript.txt:2"), &[crlf]),
+        two_lines
+    );
+}
+
+#[test]
+fn an_excerpt_on_another_line() {
+    let not_taken = refused_alone(
+        read_signal(
+            "Ana: and we ask upstream for a release.",
+            "transcript.txt:2",
+        ),
+        &[transcript()],
+    );
+    names(
+        &not_taken,
+        "excerpt",
+        "does not stand in `transcript.txt` as one run beginning on line 2",
+    );
+}
+
+#[test]
+fn an_excerpt_in_another_file() {
+    let not_taken = refused_alone(
+        read_signal(SECOND_LINE, "notes.md:1"),
+        &[transcript(), notes()],
+    );
+    names(
+        &not_taken,
+        "excerpt",
+        "does not stand in `notes.md` as one run beginning on line 1",
+    );
+}
+
+#[test]
+fn an_excerpt_across_two_files() {
+    let not_taken = refused_alone(
+        read_signal(
+            "- pin mise\nAna: the shim times out on the first run.",
+            "notes.md:2",
+        ),
+        &[notes(), transcript()],
+    );
+    names(
+        &not_taken,
+        "excerpt",
+        "does not stand in `notes.md` as one run beginning on line 2",
+    );
+}
+
+#[test]
+fn whitespace_and_case_kept() {
+    for excerpt in [
+        "Ben: we pin  mise until it is fixed.",
+        "Ben: We pin mise until it is fixed.",
+    ] {
+        let not_taken = refused_alone(read_signal(excerpt, "transcript.txt:2"), &[transcript()]);
+        names(&not_taken, "excerpt", "as one run beginning on line 2");
+    }
+}
