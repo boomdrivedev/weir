@@ -1,5 +1,5 @@
 //! An attendee joins by its address and a speaker by its name (119, 121;
-//! record 0010).
+//! record 0011).
 
 use serde_json::json;
 use weir_policy::{Facts, People, Value};

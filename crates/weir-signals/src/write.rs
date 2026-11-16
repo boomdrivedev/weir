@@ -224,7 +224,7 @@ impl InboxAt {
     /// `capture.rec` and, with its own signal, a `signals.rec` holding
     /// `<key>#1`, and with a rule's move, the move appended to `moves.rec`
     /// and the item it makes, in one write (19, 126 to 128; core.13,
-    /// core.57); refused when the key is held, writing nothing (14).
+    /// core.58); refused when the key is held, writing nothing (14).
     pub fn take(&self, taken: &Taken) -> Result<Write, Refused> {
         let capture = &taken.capture;
         let key = &capture.key;
@@ -319,7 +319,7 @@ impl InboxAt {
     /// current item here, or, where it has none, into the item it makes
     /// under the name handed, which no item of the inbox may have had (35,
     /// 128). The move is checked as [`InboxAt::make_move`] checks one, and
-    /// a replay on a new tip forms it again there (core.26; record 0010).
+    /// a replay on a new tip forms it again there (core.26; record 0011).
     fn rules_move(
         &self,
         write: &mut Write,

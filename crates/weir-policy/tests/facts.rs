@@ -1,5 +1,5 @@
 //! A fact is a name with one value or several, and each name has one sort
-//! (117, 118; C.1, C.9; record 0010).
+//! (117, 118; C.1, C.9; record 0011).
 
 use jiff::civil::date;
 use serde_json::{json, Number};

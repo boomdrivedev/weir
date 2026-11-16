@@ -2,7 +2,7 @@
 
 ### Requirement: A policy is read whole and refused naming the field
 
-A policy SHALL be read from its settings document's `[[rules]]`, in order, each rule with its name, its `when`, exactly one of `kind` with `repository`, `person` and `drop`, a `priority` for a launch or a person's turn and none for a drop, and a `window` or none, not with a drop. A rule that breaks this or 123, names a rule twice, or holds a field C.9 does not name SHALL refuse the policy naming the field (122; C.9; core.56).
+A policy SHALL be read from its settings document's `[[rules]]`, in order, each rule with its name, its `when`, exactly one of `kind` with `repository`, `person` and `drop`, a `priority` for a launch or a person's turn and none for a drop, and a `window` or none, not with a drop. A rule that breaks this or 123, names a rule twice, or holds a field C.9 does not name SHALL refuse the policy naming the field (122; C.9; core.57).
 
 #### Scenario: C.9's policy read
 - **WHEN** the settings document of C.9's example is read
@@ -50,7 +50,7 @@ A policy SHALL be read from its settings document's `[[rules]]`, in order, each 
 
 ### Requirement: A rule's match reads facts and the capture's age alone
 
-A match SHALL combine, by `all`, `any` and `not`, a fact compared with `is`, `in`, `exists` or `contains`, and the capture's age with `older`. A fact of several values SHALL hold a comparison when any value does; `contains` SHALL compare a text value with its case evened; `older` SHALL hold when the age is past its span, strictly. A match SHALL read no signal's words and no raw material (123; record 0010; core.56).
+A match SHALL combine, by `all`, `any` and `not`, a fact compared with `is`, `in`, `exists` or `contains`, and the capture's age with `older`. A fact of several values SHALL hold a comparison when any value does; `contains` SHALL compare a text value with its case evened; `older` SHALL hold when the age is past its span, strictly. A match SHALL read no signal's words and no raw material (123; record 0011; core.57).
 
 #### Scenario: Any value of a fact holds a comparison
 - **WHEN** a rule matches `attendee.client` is true, and of two attendees one joins a client and one an org that is not
@@ -74,7 +74,7 @@ A match SHALL combine, by `all`, `any` and `not`, a fact compared with `is`, `in
 
 ### Requirement: Reading a policy gives the first rule whose match holds
 
-Reading a policy for a signal SHALL give the first rule, in the policy's order, whose match holds over the signal's stated, joined and read facts at the time given, or none. A rule's outcome, priority and window SHALL be its own, whatever the facts say. The same policy, people list, facts and time SHALL give the same rule, and reading SHALL change nothing (124, 125; I10; core.56).
+Reading a policy for a signal SHALL give the first rule, in the policy's order, whose match holds over the signal's stated, joined and read facts at the time given, or none. A rule's outcome, priority and window SHALL be its own, whatever the facts say. The same policy, people list, facts and time SHALL give the same rule, and reading SHALL change nothing (124, 125; I10; core.57).
 
 #### Scenario: The first rule in order
 - **WHEN** two rules of a policy match a signal
@@ -94,7 +94,7 @@ Reading a policy for a signal SHALL give the first rule, in the policy's order, 
 
 ### Requirement: A capture as it lands is read by rules on stated facts alone
 
-Reading a policy for a capture as it lands SHALL pass over every rule whose match names a read fact, or a fact joined from one, at any depth, and SHALL give the first of the others whose match holds over the capture's stated facts and those joined from them, or none (125; core.57).
+Reading a policy for a capture as it lands SHALL pass over every rule whose match names a read fact, or a fact joined from one, at any depth, and SHALL give the first of the others whose match holds over the capture's stated facts and those joined from them, or none (125; core.58).
 
 #### Scenario: A rule on a read fact is passed over as a capture lands
 - **WHEN** a policy's first rule is `{ not = { fact = "says", exists = true } }`, and its second matches the capture's title
@@ -106,7 +106,7 @@ Reading a policy for a capture as it lands SHALL pass over every rule whose matc
 
 ### Requirement: A rule's item is named for its rule and its window's close
 
-A rule's item SHALL be named `<rule>-<time>`, the time the first its window names after the item's making, read in the time zone given, or its making where the rule has no window or its window names no later time, written in UTC as `YYYYMMDDTHHMMSSZ` (128, 129; C.5, C.9; record 0010; core.57).
+A rule's item SHALL be named `<rule>-<time>`, the time the first its window names after the item's making, read in the time zone given, or its making where the rule has no window or its window names no later time, written in UTC as `YYYYMMDDTHHMMSSZ` (128, 129; C.5, C.9; record 0011; core.58).
 
 #### Scenario: An item named for its window's next time
 - **WHEN** `point-releases`, its window `*/30 * * * *`, makes an item at 2026-11-12T10:05:00Z, read in UTC

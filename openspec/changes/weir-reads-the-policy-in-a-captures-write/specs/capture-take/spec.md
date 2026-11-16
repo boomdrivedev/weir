@@ -2,7 +2,7 @@
 
 ### Requirement: The capture record is weir-capture/1 in recutils
 
-A taken capture SHALL be written as one recutils record naming `format: weir-capture/1`, with its key, source, event time, title and link as offered, its pointer, how it came in (`run:<adapter>`, `intake` or `import:<body>`), the machine, the taken-at time, whether it is unread, and its stated facts as `fact` fields, never a joined fact; a field with no value is left out, and the record SHALL pass `recfix` (16, 22, 40, 121; C.2; core.22, core.24, core.55).
+A taken capture SHALL be written as one recutils record naming `format: weir-capture/1`, with its key, source, event time, title and link as offered, its pointer, how it came in (`run:<adapter>`, `intake` or `import:<body>`), the machine, the taken-at time, whether it is unread, and its stated facts as `fact` fields, never a joined fact; a field with no value is left out, and the record SHALL pass `recfix` (16, 22, 40, 121; C.2; core.22, core.24, core.56).
 
 #### Scenario: A capture from a run
 - **WHEN** an offer from a run of the adapter `releases` is taken on `deneb`
@@ -48,7 +48,7 @@ Given the same lines, raw material and limit, and the same policy, people list, 
 
 ### Requirement: Take given a policy reads it in the capture's write
 
-A take given a policy, a people list and the machine's time zone SHALL read the policy for an own excerpt's signal over its capture's stated and joined facts, and for a capture with no own excerpt as it lands, at the taken-at time, and SHALL hand the inbox the first matching rule's move with the capture: a join, with the rule's priority and the item name for the taken-at time, or a drop with its reason (125, 126, 128; core.57).
+A take given a policy, a people list and the machine's time zone SHALL read the policy for an own excerpt's signal over its capture's stated and joined facts, and for a capture with no own excerpt as it lands, at the taken-at time, and SHALL hand the inbox the first matching rule's move with the capture: a join, with the rule's priority and the item name for the taken-at time, or a drop with its reason (125, 126, 128; core.58).
 
 #### Scenario: A patch release joins its rule's item
 - **WHEN** a take given C.9's policy at 2026-11-12T10:05:00Z, in UTC, takes a release's offer with an own excerpt stating `level` as `"patch"`

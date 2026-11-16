@@ -1,5 +1,5 @@
 //! A rule's match reads facts and the capture's age alone (123; record
-//! 0010).
+//! 0011).
 
 use jiff::SignedDuration;
 use serde_json::json;

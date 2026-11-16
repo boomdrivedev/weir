@@ -4,7 +4,7 @@
 //! The list is read from `[about]`, `[[person]]` and `[[org]]` of a host's
 //! settings document, whose other tables are its host's and are left alone.
 //! A field the profile does not name is refused naming it, as a policy's is
-//! (record 0010).
+//! (record 0011).
 
 use std::fmt;
 
@@ -61,7 +61,7 @@ pub struct Org {
 
 /// Why a people list or a policy was refused, naming the field by its path
 /// counting from 0, as `person[0].name` or `rules[1].when.all[0].fact`
-/// (122; C.9; record 0010), or naming none where the document is not TOML.
+/// (122; C.9; record 0011), or naming none where the document is not TOML.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SettingsError {
     /// The field refused, none where the document is not TOML.
@@ -93,7 +93,7 @@ impl std::error::Error for SettingsError {}
 impl People {
     /// Reads the people list from a settings document (119; C.9): its
     /// `[about]`, `[[person]]` and `[[org]]`, each field checked and every
-    /// other taking its default (record 0010).
+    /// other taking its default (record 0011).
     pub fn read(settings: &str) -> Result<People, SettingsError> {
         let document = document(settings)?;
         let about = match document.get("about") {
@@ -151,7 +151,7 @@ impl People {
     /// whose names hold it and the orgs of that person's addresses. An
     /// address or a name two persons hold joins neither, a domain two orgs
     /// hold neither, and each is compared with its case evened (record
-    /// 0010). Values are listed in the order of the attendees or speakers
+    /// 0011). Values are listed in the order of the attendees or speakers
     /// they come from.
     pub fn join(&self, stated: &Facts, read: &Facts) -> Facts {
         let mut joined = Facts::new();
@@ -224,7 +224,7 @@ fn texts<'a>(facts: &'a Facts, name: &str) -> impl Iterator<Item = &'a str> {
 }
 
 /// The domain of an address: one `@` with text on each side and no blank
-/// (record 0010).
+/// (record 0011).
 fn domain(address: &str) -> Option<&str> {
     let (local, domain) = address.split_once('@')?;
     let shaped = !local.is_empty()

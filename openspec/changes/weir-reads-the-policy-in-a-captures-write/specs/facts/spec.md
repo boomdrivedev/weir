@@ -2,7 +2,7 @@
 
 ### Requirement: A fact is a name with one value or several
 
-A fact SHALL be a name with one value or several, each a text, a number, true or false, or a date, a date being a string that reads as an RFC 3339 full-date. A fact of no value, or a value that is null, an object or a list in a list, SHALL be refused naming the fact. Two numbers SHALL be one value when they are the same number (117; C.9; record 0010; core.55).
+A fact SHALL be a name with one value or several, each a text, a number, true or false, or a date, a date being a string that reads as an RFC 3339 full-date. A fact of no value, or a value that is null, an object or a list in a list, SHALL be refused naming the fact. Two numbers SHALL be one value when they are the same number (117; C.9; record 0011; core.56).
 
 #### Scenario: A fact of several values
 - **WHEN** an offer's `facts` gives `attendee` as `["dana@acme.com", "kim@globex.com"]`
@@ -26,7 +26,7 @@ A fact SHALL be a name with one value or several, each a text, a number, true or
 
 ### Requirement: Each fact's name has one sort
 
-A fact's name SHALL be read, `says`, `speaker`, `about`, `owner` or `due`; joined, `attendee.` or `speaker.` then `name`, `role`, `teams`, `org` or `client`; or stated, lowercase letters, digits, `_` and `-` but `source`, `title`, `event_at` and a read name. An offer's `facts` SHALL hold stated names alone, and any other SHALL be refused naming it (117, 118; C.1 step 1, C.9; record 0010; core.6).
+A fact's name SHALL be read, `says`, `speaker`, `about`, `owner` or `due`; joined, `attendee.` or `speaker.` then `name`, `role`, `teams`, `org` or `client`; or stated, lowercase letters, digits, `_` and `-` but `source`, `title`, `event_at` and a read name. An offer's `facts` SHALL hold stated names alone, and any other SHALL be refused naming it (117, 118; C.1 step 1, C.9; record 0011; core.6).
 
 #### Scenario: A fact named in capitals
 - **WHEN** an offer's `facts` holds `Level`
@@ -46,7 +46,7 @@ A fact's name SHALL be read, `says`, `speaker`, `about`, `owner` or `due`; joine
 
 ### Requirement: Facts at rest are one field per value
 
-Facts SHALL be written at rest one `fact` field per value, `<name> <value as JSON>`, in their names' order, each fact's values in the order given, and SHALL read back as written; a fact of one value and a list of one SHALL read back alike. A field not of that shape SHALL be refused naming `fact` (C.2, C.9; record 0010; core.55).
+Facts SHALL be written at rest one `fact` field per value, `<name> <value as JSON>`, in their names' order, each fact's values in the order given, and SHALL read back as written; a fact of one value and a list of one SHALL read back alike. A field not of that shape SHALL be refused naming `fact` (C.2, C.9; record 0011; core.56).
 
 #### Scenario: Facts at rest in their names' order
 - **WHEN** an offer states `level` as `"patch"` and `attendee` as `["b@acme.com", "a@acme.com"]`
@@ -58,7 +58,7 @@ Facts SHALL be written at rest one `fact` field per value, `<name> <value as JSO
 
 ### Requirement: The people list is read whole and refused naming the field
 
-The people list SHALL be read from `[about]`, `[[person]]` and `[[org]]` of its settings document, ignoring the document's other tables. A person or an org with no `name`, a field of the wrong shape, or one the profile does not name SHALL be refused naming it, as `person[0].name`; every other field SHALL take its default (119; C.9; record 0010; core.54).
+The people list SHALL be read from `[about]`, `[[person]]` and `[[org]]` of its settings document, ignoring the document's other tables. A person or an org with no `name`, a field of the wrong shape, or one the profile does not name SHALL be refused naming it, as `person[0].name`; every other field SHALL take its default (119; C.9; record 0011; core.55).
 
 #### Scenario: A people list read from the settings
 - **WHEN** the settings document of C.9's example, which holds a table of the host's own besides, is read
@@ -74,7 +74,7 @@ The people list SHALL be read from `[about]`, `[[person]]` and `[[org]]` of its 
 
 ### Requirement: An attendee joins by its address and a speaker by its name
 
-An attendee's address SHALL join the person whose addresses hold it and the org whose domains hold its domain; a speaker's name SHALL join the person whose names hold it and the orgs of that person's addresses. Each SHALL be compared with its case evened. An address or a name two persons hold SHALL join neither, and a domain two orgs hold neither (119; record 0010; core.55).
+An attendee's address SHALL join the person whose addresses hold it and the org whose domains hold its domain; a speaker's name SHALL join the person whose names hold it and the orgs of that person's addresses. Each SHALL be compared with its case evened. An address or a name two persons hold SHALL join neither, and a domain two orgs hold neither (119; record 0011; core.56).
 
 #### Scenario: An attendee joins its person and org
 - **WHEN** a capture states the attendees `dana@acme.com` and `kim@globex.com`, and the people list is C.9's

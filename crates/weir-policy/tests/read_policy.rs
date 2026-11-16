@@ -1,5 +1,5 @@
 //! A policy is read whole and refused naming the field (122, 123; C.9;
-//! record 0010).
+//! record 0011).
 
 use weir_cadence::Schedule;
 use weir_policy::{Match, Outcome, Policy, Priority, Test, Value};

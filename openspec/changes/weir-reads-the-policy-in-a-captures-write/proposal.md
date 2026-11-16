@@ -33,9 +33,9 @@ every host takes a line the same way (millpond 127, 128). weir has no
 facts, no people list and no policy yet, and `take` hands an inbox a
 capture and its own excerpt's signal alone.
 
-Record 0010, proposed on this branch, is this change's own choice of
+Record 0011, proposed on this branch, is this change's own choice of
 where the code lies, where a rule's item is found, and what C.9 leaves
-open. core.54 to core.57 and the amended core.4, core.6, core.13,
+open. core.55 to core.58 and the amended core.4, core.6, core.13,
 core.14, core.16, core.20 and core.33 say it as rules, on this branch.
 
 ## What Changes

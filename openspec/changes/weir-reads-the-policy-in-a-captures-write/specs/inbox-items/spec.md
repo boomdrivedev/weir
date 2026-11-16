@@ -2,7 +2,7 @@
 
 ### Requirement: A rule's item names its rule and its priority
 
-A rule's item SHALL be recorded as `weir-item/1` made by a join, named by `rule:<name>` at its making, with `rule` and `priority`, the priority's word, after `named_at`, and `closed_at` once its window closes. `rule` without `priority` or the converse, either on an item a conclusion made, or `closed_at` on an item no rule made, SHALL be refused naming the field (128; C.2; core.57).
+A rule's item SHALL be recorded as `weir-item/1` made by a join, named by `rule:<name>` at its making, with `rule` and `priority`, the priority's word, after `named_at`, and `closed_at` once its window closes. `rule` without `priority` or the converse, either on an item a conclusion made, or `closed_at` on an item no rule made, SHALL be refused naming the field (128; C.2; core.58).
 
 #### Scenario: A rule's item record
 
@@ -21,7 +21,7 @@ A rule's item SHALL be recorded as `weir-item/1` made by a join, named by `rule:
 
 ### Requirement: A rule's join goes into its current item
 
-A rule's join SHALL go into the rule's current item at the tip it lands on, the item naming the rule with no `closed_at`, and only where the rule has none SHALL make an item under the name handed; a name an item of the inbox has had SHALL then be refused naming it. A replay on a new tip SHALL find its current item again (35, 46, 128; core.26, core.57).
+A rule's join SHALL go into the rule's current item at the tip it lands on, the item naming the rule with no `closed_at`, and only where the rule has none SHALL make an item under the name handed; a name an item of the inbox has had SHALL then be refused naming it. A replay on a new tip SHALL find its current item again (35, 46, 128; core.26, core.58).
 
 #### Scenario: A patch release then another ten minutes later
 

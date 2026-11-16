@@ -5,7 +5,7 @@
 //! JSON's string, number or boolean, a date being a string that reads as an
 //! RFC 3339 full-date, or a list of them (C.1, C.9). Its name gives its
 //! sort: stated by a source, joined by a host, or read by a reader (117 to
-//! 120; record 0010).
+//! 120; record 0011).
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -20,7 +20,7 @@ pub enum Value {
     /// A text, as written.
     Text(String),
     /// A number, one value however it is spelled: `900` and `900.0` are
-    /// equal (record 0010).
+    /// equal (record 0011).
     Number(Number),
     /// True or false.
     Bool(bool),
@@ -124,7 +124,7 @@ const WHOM: [&str; 2] = ["attendee", "speaker"];
 const JOINED: [&str; 5] = ["name", "role", "teams", "org", "client"];
 
 /// The stated facts an offer gives as fields of its own, never in its
-/// `facts` (117; record 0010).
+/// `facts` (117; record 0011).
 const OWN_FIELDS: [&str; 3] = ["source", "title", "event_at"];
 
 /// The sort C.9 gives the name `name`, or none where it spells none.
@@ -299,7 +299,7 @@ impl Facts {
 impl Facts {
     /// The facts at rest: one text per value, `<name> <value as JSON>`, in
     /// the names' order, each fact's values in the order given, each the
-    /// value of one `fact` field (C.2, C.9; record 0010).
+    /// value of one `fact` field (C.2, C.9; record 0011).
     pub fn to_fields(&self) -> Vec<String> {
         self.facts
             .iter()
@@ -314,7 +314,7 @@ impl Facts {
     /// The stated facts `fact` fields hold, each `<name> <value as JSON>`,
     /// a name's values gathered in the order written, so a fact of one
     /// value and a list of one read back alike; a field of another shape is
-    /// refused naming `fact` (C.2, C.9; record 0010).
+    /// refused naming `fact` (C.2, C.9; record 0011).
     pub fn from_fields<'a>(fields: impl IntoIterator<Item = &'a str>) -> Result<Facts, FactError> {
         let mut facts = Facts::new();
         for field in fields {

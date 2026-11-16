@@ -20,11 +20,11 @@ millpond's 127 and 128 have millpond read the policy in the write that
 brings a signal, and its core.1, at boomdrivedev/millpond `75b0cea`, has
 `take` do it and millpond write what `take` hands it.
 
-Record 0010, proposed on this branch, decides what the statement leaves
+Record 0011, proposed on this branch, decides what the statement leaves
 to weir. `weir-policy` holds the facts, the people list and the policy,
 and `weir-capture` depends on it. A rule's current item is found at the
 tip the write lands on. It also settles the details C.9 leaves open,
-each cited below as record 0010.
+each cited below as record 0011.
 
 Rules this design relies on, all in `docs/architecture/core.md`, the one
 page whose area the change touches:
@@ -33,7 +33,7 @@ page whose area the change touches:
   the time zone are its caller's.
 - core.2: no source or test names a tool of the family. The fixtures
   are C.9's people and rules.
-- core.4 and core.57: no move is chosen but the first matching rule's.
+- core.4 and core.58: no move is chosen but the first matching rule's.
 - core.6: an offer's `facts` is read, each fact spelled as C.9 spells
   it, and a field the contract does not name is still ignored.
 - core.8: a capture's age reads its event time.
@@ -53,7 +53,7 @@ page whose area the change touches:
 - core.33: a rule's window is a schedule `weir-cadence` reads.
 - core.39 and core.40: `weir-policy` is a moon project of its own, with
   its four checks.
-- core.54 to core.56: one reader of the facts, the people list and the
+- core.55 to core.57: one reader of the facts, the people list and the
   policy, reading facts alone.
 
 The design departs from no rule.
@@ -92,7 +92,7 @@ The design departs from no rule.
 weir's. Its tests take jiff's `tzdb-bundle-always`, as `weir-cadence`'s
 do. Its modules are `fact`, `people`, `policy` and `reading`, with
 `#![deny(missing_docs)]`. `weir-capture` depends on it, and so does
-`weir-signals` for `Priority` (record 0010). `weir-cadence`'s
+`weir-signals` for `Priority` (record 0011). `weir-cadence`'s
 `Schedule::first_after` becomes public, documented as it stands.
 
 ### 2. A fact's names, sorts and values
@@ -107,7 +107,7 @@ spells none:
 | stated | lowercase letters, digits, `_` and `-`, but `source`, `title`, `event_at` and the read names |
 
 `source`, `title` and `event_at` are stated under their own names from
-the offer's own fields (117), never from `facts` (record 0010).
+the offer's own fields (117), never from `facts` (record 0011).
 
 `Value` is `Text(String)`, `Number(serde_json::Number)`, `Bool(bool)` or
 `Date(jiff::civil::Date)`. A JSON string that reads as an RFC 3339
@@ -127,7 +127,7 @@ for one value of a list:
 
 `Facts::to_json` writes the object back, a fact of one value as the value
 and one of several as a list, and `Facts` serializes as it writes, so an
-offer printed as a line carries its facts (record 0010).
+offer printed as a line carries its facts (record 0011).
 
 ### 3. Facts at rest
 
@@ -136,7 +136,7 @@ the order of `Facts`. `Facts::from_fields` reads them back, a name's
 values gathered in the order written, and refuses a text that is not a
 stated name, one blank and a JSON value of 117's forms, naming `fact`
 (C.9). A fact of one value and a list of one read back alike (record
-0010).
+0011).
 
 ### 4. The people list
 
@@ -147,7 +147,7 @@ default to empty and `role` to none. An org needs `name`. `domains`
 defaults to empty and `client` to `false`. `[about]`'s `teams` and
 `repositories` default to empty. A field of the wrong shape, or one the
 profile does not name, is refused with a `SettingsError` naming it:
-`person[0].adresses`, counting from 0 (record 0010).
+`person[0].adresses`, counting from 0 (record 0011).
 
 ### 5. The join
 
@@ -157,14 +157,14 @@ joined facts, written in no record (121):
 - Each value of the stated `attendee` that is an address, one `@` with
   text on each side and no blank, joins the person whose `addresses`
   hold it. It joins the org whose `domains` hold the text after its `@`
-  (record 0010).
+  (record 0011).
 - Each value of the read `speaker` joins the person whose `names` hold
   it, and the orgs whose `domains` hold the domain of one of that
   person's addresses.
 - An address or a name two persons hold joins neither person, and a
-  domain two orgs hold joins neither org (119; record 0010).
+  domain two orgs hold joins neither org (119; record 0011).
 - Addresses, names and domains are compared with their case evened
-  (record 0010).
+  (record 0011).
 
 A joined person gives `<whom>.name`, `<whom>.role` where it has one and
 `<whom>.teams`, each team a value. A joined org gives `<whom>.org`, its
@@ -209,7 +209,7 @@ refused, and so is a `fact` holding other than exactly one of `is`, `in`,
 so is a span other than a whole number of `m`, `h` or `d`. Each is
 refused naming its path, `rules[0].when.all[1].fact`. A value is spelled
 as an offer's is (decision 2). A TOML date or time is refused (record
-0010).
+0011).
 
 ### 7. The match
 
@@ -222,7 +222,7 @@ as an offer's is (decision 2). A TOML date or time is refused (record
 - `Older(span)` holds when the age is past the span, strictly. There is
   no age where the event time cannot be read, and none past any span
   where it is after the time given.
-- `All` of none holds, and `Any` of none does not (record 0010).
+- `All` of none holds, and `Any` of none does not (record 0011).
 
 A fact absent holds no `Is`, `In` or `Contains`.
 
@@ -244,7 +244,7 @@ read facts where there are some, and `People::join` of them all.
   and those joined from them (125).
 
 The age is `now` less the event time. Neither reading reads a clock or
-changes anything (core.1, core.56).
+changes anything (core.1, core.57).
 
 ### 9. A rule's item's name
 
@@ -252,7 +252,7 @@ changes anything (core.1, core.56).
 String` is `<rule>-<time>`. `<time>` is the first time the window names
 after `made_at`, read in `zone`, or `made_at` itself for a rule with no
 window or a window that names no later time. It is written in UTC as
-`YYYYMMDDTHHMMSSZ` (C.9; record 0010).
+`YYYYMMDDTHHMMSSZ` (C.9; record 0011).
 
 ### 10. The offer and the capture
 
@@ -348,7 +348,7 @@ carries a rule's move:
 
 Since `Inbox::write` forms the write on each tip it reads, a replay finds
 the current item another writer made meanwhile and joins it (core.26;
-record 0010).
+record 0011).
 
 ### 16. The moon projects
 

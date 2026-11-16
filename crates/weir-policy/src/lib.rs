@@ -1,6 +1,6 @@
 //! The facts a signal carries, the people list they are joined from, and
 //! the keeper's policy (A.16, A.17; C.9), read once for every host
-//! (core.54).
+//! (core.55).
 //!
 //! The crate holds a fact's names, values and sorts, in flight as JSON and
 //! at rest as `fact` fields (117, 118; C.9); the people list, read from a
@@ -11,7 +11,7 @@
 //!
 //! Every function answers from its arguments alone: the time and the time
 //! zone are its caller's, so the crate reads no clock and keeps no state,
-//! and reading a policy changes nothing (core.1, core.56).
+//! and reading a policy changes nothing (core.1, core.57).
 #![deny(missing_docs)]
 
 mod fact;

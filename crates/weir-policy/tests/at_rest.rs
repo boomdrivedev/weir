@@ -1,4 +1,4 @@
-//! Facts at rest are one `fact` field per value (C.2, C.9; record 0010).
+//! Facts at rest are one `fact` field per value (C.2, C.9; record 0011).
 
 use serde_json::json;
 use weir_policy::Facts;

@@ -69,7 +69,7 @@ pub struct Capture {
     /// That it has no own signal and no reading (19).
     pub unread: bool,
     /// The facts its offer stated, written last as one `fact` field per
-    /// value; never a joined fact (16, 121; C.2, C.9; core.55).
+    /// value; never a joined fact (16, 121; C.2, C.9; core.56).
     pub facts: Facts,
 }
 

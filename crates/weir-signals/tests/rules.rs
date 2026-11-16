@@ -1,6 +1,6 @@
 //! A rule's move, and the item it makes, written in its capture's write,
 //! held to the scenarios of inbox-signals and inbox-items (19, 29 to 32,
-//! 35, 126 to 128; C.2; core.13, core.18, core.19, core.26, core.57).
+//! 35, 126 to 128; C.2; core.13, core.18, core.19, core.26, core.58).
 
 mod common;
 

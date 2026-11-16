@@ -1,5 +1,5 @@
 //! The people list is read whole and refused naming the field (119; C.9;
-//! record 0010).
+//! record 0011).
 
 use weir_policy::{About, Org, People, Person};
 

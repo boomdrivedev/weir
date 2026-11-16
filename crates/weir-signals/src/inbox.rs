@@ -609,7 +609,7 @@ impl InboxAt {
 
     /// The rule's current item: the item naming the rule `rule` with no
     /// `closed_at`, or, where a write formed elsewhere left several, the
-    /// earliest by `named_at`, then by name (128; record 0010).
+    /// earliest by `named_at`, then by name (128; record 0011).
     pub fn rule_item(&self, rule: &str) -> Option<&ItemAt> {
         let named_at = |at: &ItemAt| OffsetDateTime::parse(&at.item.named_at, &Rfc3339).ok();
         self.items

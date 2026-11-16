@@ -5,7 +5,7 @@
 //! read facts a reader gave where there are some, and the facts joined from
 //! them both by the people list as it stands (119, 121). Neither reading
 //! reads a clock or changes anything: the time is its caller's (core.1,
-//! core.56).
+//! core.57).
 
 use jiff::{SignedDuration, Timestamp};
 

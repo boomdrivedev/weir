@@ -1,5 +1,5 @@
 //! A rule's item is named for its rule and its window's close (128, 129;
-//! C.5, C.9; record 0010).
+//! C.5, C.9; record 0011).
 
 use jiff::tz::{TimeZone, TimeZoneDatabase};
 use jiff::Timestamp;

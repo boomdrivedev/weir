@@ -76,7 +76,7 @@ An own signal with no nature SHALL be taken only with a rule's move, and only as
 
 ### Requirement: A rule's move stands once written, in no batch
 
-A rule's move SHALL be a join or a drop of its capture's own signal, by `rule:<name>`, at the capture's taken-at time, in no batch, and SHALL stand once written; a drop's reason SHALL be its target and its note. A rule's move with no own signal SHALL be refused naming `signal` (29 to 32, 128; core.18, core.19, core.57).
+A rule's move SHALL be a join or a drop of its capture's own signal, by `rule:<name>`, at the capture's taken-at time, in no batch, and SHALL stand once written; a drop's reason SHALL be its target and its note. A rule's move with no own signal SHALL be refused naming `signal` (29 to 32, 128; core.18, core.19, core.58).
 
 #### Scenario: A rule's move names its rule
 

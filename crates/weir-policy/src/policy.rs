@@ -4,7 +4,7 @@
 //! A policy is its settings document's `[[rules]]`, in order. A rule that
 //! breaks 122 or 123, a rule named twice, or a field C.9 does not name
 //! refuses the whole policy, naming the field by its path counting from 0,
-//! as `rules[1].when.all[0].fact` (record 0010).
+//! as `rules[1].when.all[0].fact` (record 0011).
 
 use std::fmt;
 
@@ -187,8 +187,8 @@ impl Match {
     /// holds a comparison when any value does, and a fact absent holds no
     /// `is`, `in` or `contains`; `contains` evens the case of both texts;
     /// `older` holds when the age is past its span, strictly; an `all` of
-    /// none holds and an `any` of none does not (record 0010). It reads
-    /// nothing but its arguments (core.56).
+    /// none holds and an `any` of none does not (record 0011). It reads
+    /// nothing but its arguments (core.57).
     pub fn holds(&self, facts: &Facts, age: Option<SignedDuration>) -> bool {
         match self {
             Match::All(matches) => matches.iter().all(|one| one.holds(facts, age)),
@@ -218,7 +218,7 @@ impl Rule {
     /// `<rule>-<time>`, the time the first its window names after
     /// `made_at`, read in `zone`, or `made_at` itself for a rule with no
     /// window or a window that names no later time, written in UTC as
-    /// `YYYYMMDDTHHMMSSZ` (C.5; record 0010).
+    /// `YYYYMMDDTHHMMSSZ` (C.5; record 0011).
     pub fn item_name(&self, made_at: Timestamp, zone: &TimeZone) -> String {
         let close = self
             .window
@@ -456,7 +456,7 @@ fn read_match(value: &Toml, at: &str) -> Result<Match, SettingsError> {
 }
 
 /// A value spelled as an offer spells it (C.9): a TOML date or time is
-/// refused, since an offer's JSON spells none (record 0010).
+/// refused, since an offer's JSON spells none (record 0011).
 fn read_value(value: &Toml, at: &str) -> Result<Value, SettingsError> {
     match value {
         Toml::String(text) => Ok(Value::from_text(text)),
