@@ -1,3 +1,10 @@
+## Purpose
+
+A statechart kind, the kind format's second format beside the simple
+kind: what its declaration holds, how `read-kinds` reads it into the
+types of `weir-engine`, the engine's crate, and checks it whole, and the
+pack's cases of it (51, 81, 94, 95; C.4; S19, S20).
+
 ## ADDED Requirements
 
 ### Requirement: A kind's table holding regions is a statechart kind
