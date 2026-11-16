@@ -16,6 +16,7 @@
 /// caller reads them with the same version.
 pub use toml;
 
+mod decisions;
 mod effect;
 mod eval;
 mod guard;
@@ -25,6 +26,7 @@ mod state;
 mod statechart;
 mod tick;
 
+pub use decisions::{decisions, Standing};
 pub use effect::{Decision, Effect};
 pub use guard::{ChildrenTest, Guard, Test};
 pub use refusal::Refusal;
