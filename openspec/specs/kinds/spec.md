@@ -207,10 +207,11 @@ SHALL change nothing (58, 82, I7).
 ### Requirement: weir check reads a declaration
 `weir check <declaration>` SHALL read the file it names as a
 declaration, the elaboration sections included. When the declaration
-reads, it SHALL list each kind with its version and its stages, each
-with its deliverable or that it is a conversation, and exit 0. When the
-declaration is refused, it SHALL name each failing field with its reason
-on standard error and exit non-zero. It SHALL leave the file as it was.
+reads, it SHALL list each kind of either format in name order with its
+version, a simple kind with its stages, each with its deliverable or
+that it is a conversation, and exit 0. When the declaration is refused,
+it SHALL name each failing field with its reason on standard error and
+exit non-zero. It SHALL leave the file as it was.
 
 #### Scenario: A declaration that reads
 - **WHEN** `weir check` is given a file declaring `fix` and `change`
@@ -695,3 +696,13 @@ returned among a kind's sections as any such key is (56).
 #### Scenario: The fields' old spellings are sections
 - **WHEN** a kind that lands with no stages declares `fix = "fix"` and `max_fixes = 2`
 - **THEN** it reads with `landing_fix` and `max_landing_fixes` left out, and `fix` and `max_fixes` returned unread among its sections
+
+### Requirement: weir check lists a statechart kind
+When the declaration it reads holds a statechart kind, `weir check`
+SHALL list it among the kinds in name order with its version, its
+title, its landing fix and its bound where it names them, and each
+region with its initial state and its states.
+
+#### Scenario: A statechart kind is listed
+- **WHEN** `weir check` is given a file declaring the simple kind `bump` and C.4's statechart kind `persona`
+- **THEN** it prints `bump@2` with its stages, then `persona@1`, `  title Persona test` and `  region stages from build: build, dropped (final), passed (final), stopped, test`, in that order, and exits 0
