@@ -2,9 +2,11 @@
 
 The change a-reading-stands-as-millponds-statement-defines-it, on
 `change/a-reading-stands-as-millponds-statement-defines-it` at 2fcad3b,
-holds: the whole checks pass, every task is ticked, and every
-requirement and scenario of its two delta specs is met by the code and a
-test of the scenario's name.
+falls short and is not archived. The whole checks pass, every task is
+ticked, and every requirement and scenario of its two delta specs is met
+by the code and a test of the scenario's name; but its two modified
+requirements, archived into `openspec/specs/`, fail the gate's
+`root:specs`, as the finding below says.
 
 ## The whole checks
 
@@ -91,4 +93,21 @@ signals alone, which the check does not read.
 
 ## Findings
 
-None.
+- **The archived specs fail `root:specs`.** `root:specs` runs
+  `openspec validate --specs --strict` over `openspec/specs/` alone, so
+  the change's delta specs pass the whole checks unread. Archived, they
+  replace two requirements whose text then runs past OpenSpec's 500
+  characters, a warning `--strict` fails:
+  - `inbox-signals`, "A signal's excerpt stands verbatim in its
+    capture's raw material": 1137 characters. `openspec validate
+    inbox-signals --type spec --strict` fails with ``requirements[5]:
+    Requirement text is very long (>500 characters). Move examples and
+    edge cases into scenarios, or split it into separate requirements
+    that each state one behavior.``
+  - `inbox-cases`, "The inbox cases hold the inbox's clauses": 637
+    characters, failing the same way at `requirements[2]`.
+
+  Every other spec passes, 25 of 27. The change's delta specs need each
+  requirement at 500 characters or fewer, the detail moved into its
+  scenarios or split into requirements of its own, before it can be
+  archived.
