@@ -61,4 +61,4 @@ repository's whole checks once every task is done.
 
 ## 7. The README
 
-- [ ] 7.1 Give the README's row for `weir-engine` the words design 19 gives it, and have the comment over `Cargo.toml`'s `members` say the same of `crates/weir-engine` (design 19). True when `devenv shell -- moon run root:prose` passes.
+- [x] 7.1 Give the README's row for `weir-engine` the words design 19 gives it, and have the comment over `Cargo.toml`'s `members` say the same of `crates/weir-engine` (design 19). True when `devenv shell -- moon run root:prose` passes.

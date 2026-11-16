@@ -16,7 +16,10 @@
 #                          kind's identity, its package and content hash,
 #                          and a lock of kinds: landed
 #   crates/weir-engine     a statechart's types, which weir-kinds reads a
-#                          statechart kind into and the engine ticks
+#                          statechart kind into, and the engine's tick:
+#                          one pass over one object's state and one
+#                          snapshot, giving the transitions that fire,
+#                          their effects and the next state
 #   crates/weir-cadence    five-field cron, caught up once: landed
 #   crates/weir-delivery   a delivery's four records in recutils and JSON,
 #                          and record, hand, confirm and owed over a
