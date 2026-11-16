@@ -1342,6 +1342,7 @@ dependencies = [
 name = "weir-capture"
 version = "0.0.0"
 dependencies = [
+ "jiff",
  "jsonschema",
  "serde",
  "serde_json",
@@ -1349,6 +1350,7 @@ dependencies = [
  "tempfile",
  "time",
  "toml",
+ "weir-policy",
 ]
 
 [[package]]
