@@ -22,6 +22,7 @@ pub mod item;
 pub mod layout;
 pub mod moves;
 pub mod signal;
+mod stands;
 pub mod write;
 
 pub use format::{Format, FormatError};

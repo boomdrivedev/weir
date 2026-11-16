@@ -1,0 +1,69 @@
+# S20: persona's test state's first transition names `tested`, a state its
+# region does not hold. The declaration is refused naming the transition's
+# `to` (95; C.4).
+satisfies = [95]
+declaration = """
+[kinds.bump]
+version = 2
+
+[[kinds.bump.stages]]
+name = "code"
+prompt = "prompts/bump-code.md"
+deliverables = ["commits"]
+
+[[kinds.bump.stages]]
+name = "review"
+prompt = "prompts/bump-review.md"
+conversation = true
+
+[kinds.persona]
+version = 1
+title = "Persona test" # the words a person reads for the kind (94)
+branch = "persona"     # as a simple kind's (52)
+
+[kinds.persona.regions.stages]
+initial = "build" # one of the region's states (95)
+
+[kinds.persona.regions.stages.states.build]
+machine = "stage" # the template or statechart the state runs, by name (94)
+params = { agents = [
+  { model = "opus" },
+], join = "all", on_fail = "build", max_send_backs = 2, deliverables = [
+  "commits",
+] }
+transitions = [ # in priority order (96)
+  { when = { final = "passed" }, to = "test" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.test]
+machine = "stage"
+params = { agents = { rule = "every-persona-definition", pattern = "personas/*.md" }, join = "all", on_fail = "build", max_send_backs = 2, deliverables = [
+  "committed:tests/personas.md",
+] }
+transitions = [
+  { when = { final = "passed" }, to = "tested" },
+  { when = { final = "sent-back" }, to = "build" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.passed]
+final = true
+
+[kinds.persona.regions.stages.states.stopped]
+decision = { kind = "stalled", answers = [
+  "retry",
+  "drop",
+] } # a decision while the state is active (97)
+transitions = [
+  { when = { response = "retry" }, to = "build" },
+  { when = { response = "drop" }, to = "dropped" },
+]
+
+[kinds.persona.regions.stages.states.dropped]
+final = true
+"""
+
+[[expect.refused]]
+field = "kinds.persona.regions.stages.states.test.transitions[0].to"
+reason_holds = "`tested` names no state of this region"

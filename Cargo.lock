@@ -1364,6 +1364,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "weir-engine"
+version = "0.0.0"
+dependencies = [
+ "toml",
+]
+
+[[package]]
 name = "weir-kinds"
 version = "0.0.0"
 dependencies = [
@@ -1371,6 +1378,7 @@ dependencies = [
  "tempfile",
  "toml",
  "weir-capture",
+ "weir-engine",
 ]
 
 [[package]]

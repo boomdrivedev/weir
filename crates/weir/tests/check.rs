@@ -82,6 +82,19 @@ fn a_kind_that_names_its_fix_is_listed() {
 }
 
 #[test]
+fn a_statechart_kind_is_listed() {
+    let output = check(&fixture("persona.toml"));
+    assert_eq!(
+        text(&output.stdout),
+        "bump@2\n  code: commits\n  review: conversation\n\
+         persona@1\n  title Persona test\n\
+         \x20 region stages from build: build, dropped (final), passed (final), stopped, test\n"
+    );
+    assert_eq!(text(&output.stderr), "");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
 fn a_declaration_that_is_refused() {
     let output = check(&fixture("two-deliverables.toml"));
     assert_eq!(text(&output.stdout), "");

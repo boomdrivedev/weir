@@ -18,6 +18,7 @@ projects:
   cadence: 'crates/weir-cadence'
   capture: 'crates/weir-capture'
   delivery: 'crates/weir-delivery'
+  engine: 'crates/weir-engine'
   kinds: 'crates/weir-kinds'
   pack: 'crates/weir-pack'
   policy: 'crates/weir-policy'
