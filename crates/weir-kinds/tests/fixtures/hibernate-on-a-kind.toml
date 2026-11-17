@@ -1,0 +1,10 @@
+# `hibernate` on a kind's own table, which is no field the format names
+# there: it is a section of the kind, never read as its stages' (53, 56;
+# core.30).
+[kinds.talk]
+hibernate = true
+
+[[kinds.talk.stages]]
+name = "draft"
+prompt = "prompts/talk-draft.md"
+conversation = true

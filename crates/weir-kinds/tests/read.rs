@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use common::read;
 use weir_kinds::toml::Table;
-use weir_kinds::{Deliverable, End};
+use weir_kinds::{Deliverable, End, Repeat};
 
 fn table(text: &str) -> Table {
     text.parse().unwrap()
@@ -219,6 +219,59 @@ fn a_stages_quiet_time_reads_as_a_duration() {
             Some(Duration::from_secs(2 * 60 * 60)),
         ]
     );
+}
+
+// A stage reads whether it hibernates, as written, and left out when left
+// out (53, 56, 58; C.4 as amended at blueprints 30dce35).
+
+#[test]
+fn a_stage_reads_whether_it_hibernates() {
+    let talk = &read("hibernates.toml").unwrap().kinds["talk"];
+    let hibernates: Vec<_> = talk
+        .stages
+        .iter()
+        .map(|s| (s.name.as_str(), s.hibernate))
+        .collect();
+    assert_eq!(
+        hibernates,
+        [
+            ("draft", Some(true)),
+            ("code", Some(false)),
+            ("review", None)
+        ]
+    );
+    for stage in &talk.stages {
+        assert!(stage.sections.is_empty(), "{}", stage.name);
+    }
+}
+
+#[test]
+fn any_stage_may_hibernate() {
+    // A conversation that waits and a stage that repeats each hibernate:
+    // weir judges `hibernate` against no other field of the stage (53, 58;
+    // core.32).
+    let talk = &read("hibernate-on-any-stage.toml").unwrap().kinds["talk"];
+    let draft = &talk.stages[0];
+    assert_eq!(draft.name, "draft");
+    assert_eq!(draft.end, End::Conversation);
+    assert!(draft.wait);
+    assert_eq!(draft.hibernate, Some(true));
+    let build = &talk.stages[1];
+    assert_eq!(build.name, "build");
+    assert_eq!(build.end, End::Deliverable(Deliverable::Tasks));
+    assert_eq!(build.repeat, Some(Repeat::PerTaskGroup));
+    assert_eq!(build.hibernate, Some(true));
+}
+
+#[test]
+fn a_hibernate_on_a_kinds_table_is_a_section() {
+    // On a kind's table `hibernate` is no field the format names, and is
+    // never read as its stages' (53, 56; core.30).
+    let talk = &read("hibernate-on-a-kind.toml").unwrap().kinds["talk"];
+    assert_eq!(talk.sections, table("hibernate = true"));
+    let draft = &talk.stages[0];
+    assert_eq!(draft.name, "draft");
+    assert_eq!(draft.hibernate, None);
 }
 
 // A deliverable is one of six spellings.

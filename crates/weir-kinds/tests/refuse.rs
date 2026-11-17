@@ -331,6 +331,19 @@ fn every_failing_field_is_named() {
 }
 
 #[test]
+fn a_hibernate_of_the_wrong_shape() {
+    // 57; C.4 as amended at blueprints 30dce35; core.31.
+    let refusal = read("hibernate-shapes.toml").unwrap_err();
+    let problems: Vec<_> = (0..3)
+        .map(|n| Problem {
+            field: format!("kinds.talk.stages[{n}].hibernate"),
+            reason: "must be true or false".to_owned(),
+        })
+        .collect();
+    assert_eq!(refusal.problems, problems);
+}
+
+#[test]
 fn text_that_is_not_toml_is_refused() {
     let refusal = read_kinds("[[kinds.bump.stages]]\nname = \"code\"\nprompt = \n").unwrap_err();
     assert_eq!(refusal.problems.len(), 1);

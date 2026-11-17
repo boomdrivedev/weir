@@ -1,0 +1,20 @@
+# A stage's `hibernate` that is not a bool, once each: a string, an
+# integer and an array, each refused naming the stage's field (57; C.4 as
+# amended at blueprints 30dce35; core.31).
+[[kinds.talk.stages]]
+name = "draft"
+prompt = "prompts/talk-draft.md"
+conversation = true
+hibernate = "yes"
+
+[[kinds.talk.stages]]
+name = "review"
+prompt = "prompts/talk-review.md"
+conversation = true
+hibernate = 1
+
+[[kinds.talk.stages]]
+name = "close"
+prompt = "prompts/talk-close.md"
+conversation = true
+hibernate = [true]

@@ -27,11 +27,16 @@ context: |
   ~/Code/github_afterthought/kit-standard/main/docs/architecture/).
 
   Stack: Rust in a cargo workspace; devenv for the shell, moon (through
-  proto) for the checks, treefmt for formatting and Vale for prose.
-  Every tool runs through the shell, one command at a time:
-  devenv shell -- <command>. Each check is a moon task tagged with its
-  layer; CLAUDE.md names the layers, and check-fast (format and the
-  README's prose) runs in seconds. sluice gates every merge into a bolt
+  proto) for the checks and treefmt for formatting. Every tool runs
+  through the shell, one command at a time: devenv shell -- <command>.
+  Each check is a moon task tagged with its layer; CLAUDE.md names the
+  layers, and check-fast (format, the specs, each open change as it would
+  archive and each crate's checks) runs in seconds: a change OpenSpec's
+  archive would refuse, or one that would archive into a spec that fails
+  openspec validate --strict, such as a requirement past 500 characters,
+  fails check-fast while it is open (core.59). No task reads a Markdown
+  file of the tree's own but OpenSpec's validation of the specs and of
+  each open change as it would archive (core.39). sluice gates every merge into a bolt
   and onto main on the layers .config/sluice.toml requires. treefmt
   fails on a tracked file no formatter claims and no exclude names
   (treefmt.nix).
