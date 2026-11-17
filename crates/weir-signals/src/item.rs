@@ -7,6 +7,7 @@
 use std::fmt;
 
 use weir_capture::rec::{RecError, Record};
+use weir_policy::Priority;
 
 use crate::format::Format;
 use crate::layout::check_name;
@@ -29,11 +30,19 @@ pub struct Item {
     pub named_by: String,
     /// RFC 3339 with its offset, as the caller handed it.
     pub named_at: String,
+    /// The rule whose join made it, on a rule's item alone (128).
+    pub rule: Option<String>,
+    /// The rule's priority, on a rule's item alone (128).
+    pub priority: Option<Priority>,
+    /// When its rule's window closed, after which it takes no more of its
+    /// rule's joins (128, 129); none while it is the rule's current item.
+    pub closed_at: Option<String>,
 }
 
 impl Item {
     /// The record, `format` first, then the fields in C.2's order, with
-    /// `conclusion` only where one made it.
+    /// `conclusion` only where one made it, and `rule`, `priority` and
+    /// `closed_at` only where they have a value (128).
     pub fn to_record(&self) -> Record {
         let mut record = Record::new();
         record.push("format", Format::Item.as_str());
@@ -47,11 +56,16 @@ impl Item {
         }
         record.push("named_by", self.named_by.as_str());
         record.push("named_at", self.named_at.as_str());
+        record.push_optional("rule", self.rule.as_deref());
+        record.push_optional("priority", self.priority.map(Priority::as_str));
+        record.push_optional("closed_at", self.closed_at.as_deref());
         record
     }
 
     /// The item of a `weir-item/1` record, refused naming the field that is
-    /// missing, given twice or not of its shape.
+    /// missing, given twice or not of its shape: a rule's item names its
+    /// rule and its priority together, a join made it, and only it may say
+    /// when its window closed (128; C.2).
     pub fn from_record(record: &Record) -> Result<Item, RecError> {
         Format::of_record(record, &[Format::Item])?;
         let item = record.required("item")?;
@@ -83,13 +97,78 @@ impl Item {
         };
         let named_at = record.required("named_at")?;
         check_time(named_at).map_err(|reason| RecError::field("named_at", reason))?;
+        let rule = record.single("rule")?;
+        let priority = record.single("priority")?;
+        let closed_at = record.single("closed_at")?;
+        match (rule, priority) {
+            (Some(_), None) => {
+                return Err(RecError::field(
+                    "priority",
+                    "is missing, and a rule's item names its rule's priority (128)",
+                ))
+            }
+            (None, Some(_)) => {
+                return Err(RecError::field(
+                    "priority",
+                    "is given, and no rule made the item (128)",
+                ))
+            }
+            _ => {}
+        }
+        if let Some(rule) = rule {
+            if !is_a_rules_name(rule) {
+                return Err(RecError::field(
+                    "rule",
+                    format!("is `{rule}`, not lowercase letters, digits and `-` (C.9)"),
+                ));
+            }
+            if made_by != MadeBy::Join {
+                return Err(RecError::field(
+                    "rule",
+                    "is given, and a conclusion made the item: a rule's item is made by its join",
+                ));
+            }
+        }
+        let priority = match priority {
+            None => None,
+            Some(word) => Some(Priority::parse(word).ok_or_else(|| {
+                RecError::field(
+                    "priority",
+                    format!(
+                        "is `{word}`, not one of {}",
+                        Priority::ALL.map(Priority::as_str).join(", ")
+                    ),
+                )
+            })?),
+        };
+        if let Some(closed_at) = closed_at {
+            if rule.is_none() {
+                return Err(RecError::field(
+                    "closed_at",
+                    "is given, and no rule made the item: only a rule's window closes",
+                ));
+            }
+            check_time(closed_at).map_err(|reason| RecError::field("closed_at", reason))?;
+        }
         Ok(Item {
             item: item.to_string(),
             made_by,
             named_by: required_text(record, "named_by")?,
             named_at: named_at.to_string(),
+            rule: rule.map(str::to_string),
+            priority,
+            closed_at: closed_at.map(str::to_string),
         })
     }
+}
+
+/// Whether `name` is spelled as a rule's name: lowercase letters, digits
+/// and `-` (C.9).
+fn is_a_rules_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
 /// What became of a send (36; C.2).

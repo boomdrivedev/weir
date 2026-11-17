@@ -7,7 +7,7 @@ mod common;
 use weir_capture::rec::{self, Record};
 use weir_capture::{CameIn, LeftOut, Nature, OwnSignal, RawFile, Taken};
 use weir_signals::signal::{signals_rec, EMPTY_READING};
-use weir_signals::{InboxAt, ReadSignal, Signal, SignalId};
+use weir_signals::{InboxAt, NotTaken, ReadSignal, Signal, SignalId};
 
 use common::{after, capture, empty, key, paths, recfix, recsel_value};
 
@@ -18,7 +18,7 @@ fn id(text: &str) -> SignalId {
 fn a_signal(signal: &str) -> Signal {
     Signal {
         signal: id(signal),
-        kind: Nature::Ask,
+        kind: Some(Nature::Ask),
         asserted_by: "jdx/mise".into(),
         assertion: "mise 2026.10.10 is released; the repository pins 2026.9.18.".into(),
         subjects: vec!["release".into(), "mise".into()],
@@ -84,24 +84,32 @@ fn empty_lists() {
 #[test]
 fn a_signal_lacking_a_field_is_refused_naming_it() {
     let record = a_signal("release/x#1").to_record();
-    for field in [
-        "format",
-        "signal",
-        "kind",
-        "asserted_by",
-        "assertion",
-        "excerpt",
-        "position",
-    ] {
+    let lacking = |field: &str| {
         let mut lacking = Record::new();
         for (name, value) in record.fields() {
             if name != field {
                 lacking.push(name, value.as_str());
             }
         }
-        let error = Signal::from_record(&lacking).unwrap_err();
+        lacking
+    };
+    for field in [
+        "format",
+        "signal",
+        "asserted_by",
+        "assertion",
+        "excerpt",
+        "position",
+    ] {
+        let error = Signal::from_record(&lacking(field)).unwrap_err();
         assert_eq!(error.field.as_deref(), Some(field), "{error}");
     }
+    // A record with no `kind` reads as a signal of no nature, which the
+    // inbox's read takes of a rule's own signal alone (127).
+    assert_eq!(
+        Signal::from_record(&lacking("kind")).map(|signal| signal.kind),
+        Ok(None)
+    );
     let mut twice = record.clone();
     twice.push("position", "again");
     assert_eq!(
@@ -149,6 +157,7 @@ fn a_signal_with_a_field_left_empty_is_refused_naming_it() {
             .take(&Taken {
                 capture: capture("release/a"),
                 own_signal: None,
+                rule_move: None,
             })
             .unwrap(),
     );
@@ -183,7 +192,7 @@ fn a_signal_of_an_unknown_nature() {
 fn every_nature_reads_back() {
     for kind in Nature::ALL {
         let signal = Signal {
-            kind,
+            kind: Some(kind),
             ..a_signal("release/x#1")
         };
         let written = signals_rec(std::slice::from_ref(&signal));
@@ -233,6 +242,7 @@ fn taken_with_own(key: &str, cut: Option<LeftOut>) -> Taken {
             ..capture(key)
         },
         own_signal: Some(own_signal(key, cut)),
+        rule_move: None,
     }
 }
 
@@ -279,6 +289,7 @@ fn an_unread_capture() {
     let taken = Taken {
         capture: capture("release/a"),
         own_signal: None,
+        rule_move: None,
     };
     let inbox = empty();
     let write = inbox.take(&taken).unwrap();
@@ -304,6 +315,7 @@ fn a_held_key() {
         .take(&Taken {
             capture: capture("release/a"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0.len(), 1);
@@ -326,6 +338,7 @@ fn a_taken_capture_agrees_with_its_own_signal() {
                 ..capture("release/a")
             },
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0[0].field.as_deref(), Some("unread"));
@@ -344,6 +357,7 @@ fn a_taken_capture_agrees_with_its_own_signal() {
                 ..capture("release/a")
             },
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0[0].field.as_deref(), Some("came_in"));
@@ -360,7 +374,9 @@ fn transcript() -> RawFile {
     }
 }
 
-fn read_signal(excerpt: &str) -> ReadSignal {
+/// A reader's signal of `excerpt`, at `position`, which names a raw file
+/// and the line the excerpt begins on as `<path>:<line>` (core.16).
+fn read_signal(excerpt: &str, position: &str) -> ReadSignal {
     ReadSignal {
         kind: "constraint".into(),
         asserted_by: "Ben".into(),
@@ -368,7 +384,7 @@ fn read_signal(excerpt: &str) -> ReadSignal {
         subjects: vec!["mise".into()],
         argues_with: Vec::new(),
         excerpt: excerpt.into(),
-        position: "the transcript".into(),
+        position: position.into(),
     }
 }
 
@@ -379,6 +395,7 @@ fn with_meeting() -> InboxAt {
         .take(&Taken {
             capture: capture("meeting/file/ab12"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap();
     after(&inbox, &write)
@@ -389,9 +406,9 @@ fn three_signals_read() {
     let inbox = with_meeting();
     let key = key("meeting/file/ab12");
     let reading = [
-        read_signal("the shim times out on the first run."),
-        read_signal("we pin mise until it is fixed."),
-        read_signal("we ask upstream for a release."),
+        read_signal("the shim times out on the first run.", "transcript.txt:1"),
+        read_signal("we pin mise until it is fixed.", "transcript.txt:2"),
+        read_signal("we ask upstream for a release.", "transcript.txt:3"),
     ];
     let write = inbox.read_capture(&key, &reading, &[transcript()]).unwrap();
     assert_eq!(
@@ -446,7 +463,10 @@ fn a_gap_in_the_numbers() {
 fn a_second_reading() {
     let inbox = with_meeting();
     let key = key("meeting/file/ab12");
-    let first = [read_signal("we pin mise until it is fixed.")];
+    let first = [read_signal(
+        "we pin mise until it is fixed.",
+        "transcript.txt:2",
+    )];
     let write = inbox.read_capture(&key, &first, &[transcript()]).unwrap();
     let inbox = after(&inbox, &write);
     let refused = inbox
@@ -500,12 +520,12 @@ fn one_bad_signal_of_three() {
     let inbox = with_meeting();
     let key = key("meeting/file/ab12");
     let reading = [
-        read_signal("the shim times out on the first run."),
+        read_signal("the shim times out on the first run.", "transcript.txt:1"),
         ReadSignal {
             asserted_by: String::new(),
-            ..read_signal("we pin mise until it is fixed.")
+            ..read_signal("we pin mise until it is fixed.", "transcript.txt:2")
         },
-        read_signal("we ask upstream for a release."),
+        read_signal("we ask upstream for a release.", "transcript.txt:3"),
     ];
     let refused = inbox
         .read_capture(&key, &reading, &[transcript()])
@@ -517,10 +537,10 @@ fn one_bad_signal_of_three() {
     let reading = [
         ReadSignal {
             kind: "complaint".into(),
-            ..read_signal("the shim times out on the first run.")
+            ..read_signal("the shim times out on the first run.", "transcript.txt:1")
         },
-        read_signal("we pin mise until it is fixed."),
-        read_signal("we ask for nothing."),
+        read_signal("we pin mise until it is fixed.", "transcript.txt:2"),
+        read_signal("we ask for nothing.", "transcript.txt:3"),
     ];
     let refused = inbox
         .read_capture(&key, &reading, &[transcript()])
@@ -545,20 +565,42 @@ fn a_paraphrase() {
     let refused = inbox
         .read_capture(
             &key("meeting/file/ab12"),
-            &[read_signal("we pin mise until it gets fixed.")],
+            &[read_signal(
+                "we pin mise until it gets fixed.",
+                "transcript.txt:2",
+            )],
             &[transcript()],
         )
         .unwrap_err();
+    assert_eq!(refused.0.len(), 1);
     assert_eq!(refused.0[0].what, "meeting/file/ab12#1");
     assert_eq!(refused.0[0].field.as_deref(), Some("excerpt"));
-    // With no raw file handed in, no excerpt stands.
-    assert!(inbox
+}
+
+#[test]
+fn a_capture_with_nothing_banked() {
+    let inbox = with_meeting();
+    let key = key("meeting/file/ab12");
+    let refused = inbox
         .read_capture(
-            &key("meeting/file/ab12"),
-            &[read_signal("we pin mise until it is fixed.")],
+            &key,
+            &[read_signal(
+                "we pin mise until it is fixed.",
+                "transcript.txt:2",
+            )],
             &[],
         )
-        .is_err());
+        .unwrap_err();
+    assert_eq!(refused.0.len(), 1);
+    assert_eq!(refused.0[0].what, "meeting/file/ab12#1");
+    assert_eq!(refused.0[0].field.as_deref(), Some("position"));
+    assert!(
+        refused.0[0].why.contains("none of the capture's raw files"),
+        "{refused}"
+    );
+    // A reading of none is taken for it.
+    let inbox = after(&inbox, &inbox.read_capture(&key, &[], &[]).unwrap());
+    assert_eq!(inbox.signals(&key), Some(&[][..]));
 }
 
 #[test]
@@ -573,7 +615,7 @@ fn verbatim_across_lines() {
     let write = inbox
         .read_capture(
             &key("meeting/file/ab12"),
-            &[read_signal(two_lines)],
+            &[read_signal(two_lines, "transcript.txt:2")],
             &[notes, transcript()],
         )
         .unwrap();
@@ -582,4 +624,353 @@ fn verbatim_across_lines() {
         inbox.signal(&id("meeting/file/ab12#1")).unwrap().excerpt,
         two_lines
     );
+}
+
+/// A rule's own signal of the capture `key`, titled `title`: no nature,
+/// its excerpt and assertion the title, asserted by its source, at
+/// `title` (127).
+fn rules_signal(key: &str, title: &str, source: &str) -> Signal {
+    Signal {
+        signal: id(&format!("{key}#1")),
+        kind: None,
+        asserted_by: source.into(),
+        assertion: title.into(),
+        subjects: vec![],
+        argues_with: vec![],
+        excerpt: title.into(),
+        position: "title".into(),
+        cut: None,
+    }
+}
+
+#[test]
+fn an_own_signal_a_rule_made_has_no_nature() {
+    let stand_up = weir_capture::Capture {
+        title: Some("Daily stand-up".into()),
+        source: "meeting".into(),
+        unread: false,
+        ..capture("meeting/file/standup")
+    }
+    .to_rec();
+    let signal = rules_signal("meeting/file/standup", "Daily stand-up", "meeting");
+    let written = signals_rec(std::slice::from_ref(&signal));
+    assert!(!written.contains("kind:"), "{written}");
+    recfix(&written);
+    let files = |signals: &str| {
+        vec![
+            (
+                "inbox/captures/meeting/file/standup/capture.rec",
+                stand_up.clone(),
+            ),
+            (
+                "inbox/captures/meeting/file/standup/signals.rec",
+                signals.to_string(),
+            ),
+        ]
+    };
+    let inbox = InboxAt::read(files(&written)).unwrap();
+    let read = inbox.signal(&id("meeting/file/standup#1")).unwrap();
+    assert_eq!(read.kind, None);
+    assert_eq!(read, &signal);
+
+    // One that differs from a rule's own signal is refused naming the
+    // field that differs.
+    for (changed, field) in [
+        (
+            Signal {
+                excerpt: "Weekly stand-up".into(),
+                ..signal.clone()
+            },
+            "excerpt",
+        ),
+        (
+            Signal {
+                asserted_by: "calendar".into(),
+                ..signal.clone()
+            },
+            "asserted_by",
+        ),
+        (
+            Signal {
+                position: "line 1".into(),
+                ..signal.clone()
+            },
+            "position",
+        ),
+        (
+            Signal {
+                subjects: vec!["stand-up".into()],
+                ..signal.clone()
+            },
+            "subjects",
+        ),
+    ] {
+        let error = InboxAt::read(files(&signals_rec(&[changed]))).unwrap_err();
+        assert_eq!(
+            error.path,
+            "inbox/captures/meeting/file/standup/signals.rec"
+        );
+        assert_eq!(error.field.as_deref(), Some(field), "{error}");
+    }
+    // A capture with no title is its own signal by its key.
+    let untitled = weir_capture::Capture {
+        title: None,
+        source: "deploy".into(),
+        unread: false,
+        ..capture("deploy/web/42")
+    }
+    .to_rec();
+    let by_key = signals_rec(&[rules_signal("deploy/web/42", "deploy/web/42", "deploy")]);
+    InboxAt::read([
+        (
+            "inbox/captures/deploy/web/42/capture.rec",
+            untitled.as_str(),
+        ),
+        ("inbox/captures/deploy/web/42/signals.rec", by_key.as_str()),
+    ])
+    .unwrap();
+}
+
+#[test]
+fn a_signal_of_no_nature_that_no_rule_made() {
+    let unread = capture("release/a").to_rec();
+    let reading = signals_rec(&[Signal {
+        kind: None,
+        ..a_signal("release/a#1")
+    }]);
+    recfix(&reading);
+    let error = InboxAt::read([
+        ("inbox/captures/release/a/capture.rec", unread.as_str()),
+        ("inbox/captures/release/a/signals.rec", reading.as_str()),
+    ])
+    .unwrap_err();
+    assert_eq!(error.path, "inbox/captures/release/a/signals.rec");
+    assert_eq!(error.record, Some(1));
+    assert_eq!(error.field.as_deref(), Some("kind"));
+    // Nor is the second signal of a capture's reading a rule's.
+    let read = weir_capture::Capture {
+        unread: false,
+        ..capture("release/a")
+    }
+    .to_rec();
+    let two = signals_rec(&[
+        a_signal("release/a#1"),
+        Signal {
+            kind: None,
+            ..a_signal("release/a#2")
+        },
+    ]);
+    let error = InboxAt::read([
+        ("inbox/captures/release/a/capture.rec", read.as_str()),
+        ("inbox/captures/release/a/signals.rec", two.as_str()),
+    ])
+    .unwrap_err();
+    assert_eq!(error.record, Some(2));
+    assert_eq!(error.field.as_deref(), Some("kind"));
+}
+
+#[test]
+fn words_from_within_a_line() {
+    let inbox = with_meeting();
+    let words = "we pin mise until it is fixed.";
+    let write = inbox
+        .read_capture(
+            &key("meeting/file/ab12"),
+            &[read_signal(words, "transcript.txt:2")],
+            &[transcript()],
+        )
+        .unwrap();
+    let inbox = after(&inbox, &write);
+    assert_eq!(
+        inbox.signal(&id("meeting/file/ab12#1")).unwrap().excerpt,
+        words
+    );
+}
+
+/// The one signal not taken of a reading of `signal` alone of the meeting
+/// capture, handed `raw`, which the test expects refused.
+fn refused_alone(signal: ReadSignal, raw: &[RawFile]) -> NotTaken {
+    let refused = with_meeting()
+        .read_capture(&key("meeting/file/ab12"), &[signal], raw)
+        .unwrap_err();
+    assert_eq!(refused.0.len(), 1, "{refused}");
+    let not_taken = refused.0.into_iter().next().unwrap();
+    assert_eq!(not_taken.what, "meeting/file/ab12#1");
+    not_taken
+}
+
+/// The excerpt of the signal written by a reading of `signal` alone of the
+/// meeting capture, handed `raw`, which the test expects taken.
+fn taken_alone(signal: ReadSignal, raw: &[RawFile]) -> String {
+    let inbox = with_meeting();
+    let write = inbox
+        .read_capture(&key("meeting/file/ab12"), &[signal], raw)
+        .unwrap_or_else(|refused| panic!("{refused}"));
+    let inbox = after(&inbox, &write);
+    inbox
+        .signal(&id("meeting/file/ab12#1"))
+        .unwrap()
+        .excerpt
+        .clone()
+}
+
+/// Holds `not_taken` to naming `field`, with a reason holding `phrase`.
+fn names(not_taken: &NotTaken, field: &str, phrase: &str) {
+    assert_eq!(not_taken.field.as_deref(), Some(field), "{not_taken}");
+    assert!(not_taken.why.contains(phrase), "{not_taken}");
+}
+
+const SECOND_LINE: &str = "Ben: we pin mise until it is fixed.";
+
+#[test]
+fn a_position_naming_no_file_and_line() {
+    for position in ["the transcript", "transcript.txt", ":2"] {
+        let not_taken = refused_alone(read_signal(SECOND_LINE, position), &[transcript()]);
+        names(&not_taken, "position", "names no raw file and line");
+        assert!(
+            not_taken.why.contains(&format!("`{position}`")),
+            "{not_taken}"
+        );
+    }
+}
+
+#[test]
+fn a_line_spelled_otherwise() {
+    for position in [
+        "transcript.txt:0",
+        "transcript.txt:02",
+        "transcript.txt:+2",
+        "transcript.txt:2a",
+    ] {
+        let not_taken = refused_alone(read_signal(SECOND_LINE, position), &[transcript()]);
+        names(&not_taken, "position", "names no raw file and line");
+    }
+}
+
+#[test]
+fn a_position_naming_a_file_not_handed_in() {
+    let not_taken = refused_alone(read_signal(SECOND_LINE, "minutes.txt:1"), &[transcript()]);
+    names(
+        &not_taken,
+        "position",
+        "names `minutes.txt`, which is none of the capture's raw files",
+    );
+}
+
+#[test]
+fn a_line_past_the_files_end() {
+    let not_taken = refused_alone(
+        read_signal(SECOND_LINE, "transcript.txt:4"),
+        &[transcript()],
+    );
+    names(
+        &not_taken,
+        "position",
+        "names line 4, past the end of `transcript.txt`",
+    );
+}
+
+#[test]
+fn a_last_line_with_no_line_ending() {
+    let raw = RawFile {
+        path: "notes.md".into(),
+        bytes: b"first\nsecond".to_vec(),
+    };
+    assert_eq!(
+        taken_alone(read_signal("second", "notes.md:2"), &[raw]),
+        "second"
+    );
+}
+
+#[test]
+fn a_path_holding_a_colon() {
+    let raw = RawFile {
+        path: "meeting:12/transcript.txt".into(),
+        ..transcript()
+    };
+    assert_eq!(
+        taken_alone(
+            read_signal(SECOND_LINE, "meeting:12/transcript.txt:2"),
+            &[raw]
+        ),
+        SECOND_LINE
+    );
+}
+
+/// Notes beside the transcript: two lines, each ended by `\n`.
+fn notes() -> RawFile {
+    RawFile {
+        path: "notes.md".into(),
+        bytes: b"## Notes\n- pin mise\n".to_vec(),
+    }
+}
+
+#[test]
+fn line_endings_evened() {
+    let crlf = RawFile {
+        bytes: TRANSCRIPT.replace('\n', "\r\n").into_bytes(),
+        ..transcript()
+    };
+    let two_lines = "Ben: we pin mise until it is fixed.\n\
+                     Ana: and we ask upstream for a release.\n";
+    assert_eq!(
+        taken_alone(read_signal(two_lines, "transcript.txt:2"), &[crlf]),
+        two_lines
+    );
+}
+
+#[test]
+fn an_excerpt_on_another_line() {
+    let not_taken = refused_alone(
+        read_signal(
+            "Ana: and we ask upstream for a release.",
+            "transcript.txt:2",
+        ),
+        &[transcript()],
+    );
+    names(
+        &not_taken,
+        "excerpt",
+        "does not stand in `transcript.txt` as one run beginning on line 2",
+    );
+}
+
+#[test]
+fn an_excerpt_in_another_file() {
+    let not_taken = refused_alone(
+        read_signal(SECOND_LINE, "notes.md:1"),
+        &[transcript(), notes()],
+    );
+    names(
+        &not_taken,
+        "excerpt",
+        "does not stand in `notes.md` as one run beginning on line 1",
+    );
+}
+
+#[test]
+fn an_excerpt_across_two_files() {
+    let not_taken = refused_alone(
+        read_signal(
+            "- pin mise\nAna: the shim times out on the first run.",
+            "notes.md:2",
+        ),
+        &[notes(), transcript()],
+    );
+    names(
+        &not_taken,
+        "excerpt",
+        "does not stand in `notes.md` as one run beginning on line 2",
+    );
+}
+
+#[test]
+fn whitespace_and_case_kept() {
+    for excerpt in [
+        "Ben: we pin  mise until it is fixed.",
+        "Ben: We pin mise until it is fixed.",
+    ] {
+        let not_taken = refused_alone(read_signal(excerpt, "transcript.txt:2"), &[transcript()]);
+        names(&not_taken, "excerpt", "as one run beginning on line 2");
+    }
 }

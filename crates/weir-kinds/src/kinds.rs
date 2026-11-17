@@ -10,6 +10,7 @@ use crate::name::not_a_kinds_name;
 use crate::quiet;
 use crate::refusal::{not_toml, Problems, Refusal};
 use crate::repeat::Repeat;
+use crate::statechart::{read_statechart_kind, StatechartKind, STAGES_AND_REGIONS};
 
 /// The fields of a kind the format names; every other key is a section.
 const KIND_FIELDS: [&str; 8] = [
@@ -55,13 +56,18 @@ const STAGE_FIELDS: [&str; 13] = [
     "hibernate",
 ];
 
-/// A declaration read: every kind it declares, the settings it gives kinds
+/// A declaration read: every kind it declares, simple and statechart, the settings it gives kinds
 /// it does not declare, and every section beside them (81).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Declaration {
-    /// Every kind under the `kinds` table, by name, in name order; none
-    /// when there is no `kinds` table (51, 52).
+    /// Every simple kind under the `kinds` table, by name, in name order;
+    /// none when there is no `kinds` table (51, 52).
     pub kinds: BTreeMap<String, Kind>,
+    /// Every statechart kind under the `kinds` table, a table holding
+    /// `regions` and no `stages`, by name, in name order; none when there
+    /// is none (51, 81, 94; C.4). A name is under one of `kinds` and
+    /// `statecharts` at most.
+    pub statecharts: BTreeMap<String, StatechartKind>,
     /// Every `[kinds.<kind>]` table that holds `agents` and nothing that
     /// declares a kind, by name, in name order: settings given to a kind of
     /// that name declared elsewhere, never a kind with no stage (57, C.4).
@@ -222,6 +228,14 @@ pub struct KindSettings {
 /// where the kind's `stages` is refused, neither is judged against them
 /// (57).
 ///
+/// A table holding `regions` is a statechart kind, returned in the
+/// declaration's `statecharts`: its statechart read into the engine's
+/// types, the kind's name and version its own, and checked whole with the
+/// simple kinds, every failing field of either refused in one refusal;
+/// a table holding both `stages` and `regions` is refused naming its
+/// `regions`, and nothing else of it is read (51, 81, 94, 95; C.4;
+/// core.54).
+///
 /// A table or field the format does not name is returned unread and never
 /// fails the read (56). The same text always gives the same result, and
 /// nothing is read but the text (58, 82).
@@ -229,6 +243,7 @@ pub fn read_kinds(text: &str) -> Result<Declaration, Refusal> {
     let root: Table = text.parse().map_err(|error| not_toml(text, &error))?;
     let mut problems = Problems::default();
     let mut kinds = BTreeMap::new();
+    let mut statecharts = BTreeMap::new();
     let mut settings = BTreeMap::new();
     match root.get("kinds") {
         None => {}
@@ -243,6 +258,20 @@ pub fn read_kinds(text: &str) -> Result<Declaration, Refusal> {
                     continue;
                 }
                 match kind {
+                    // A kind's table says its format by what it holds:
+                    // regions for a statechart kind, and never both
+                    // regions and stages (94, 95, C.4); a table holding
+                    // `agents` and `regions` declares a kind (core.41).
+                    Value::Table(kind) if kind.contains_key("regions") => {
+                        if kind.contains_key("stages") {
+                            problems.refuse(&field(&at, "regions"), STAGES_AND_REGIONS);
+                        } else {
+                            statecharts.insert(
+                                name.clone(),
+                                read_statechart_kind(name, kind, &at, &mut problems),
+                            );
+                        }
+                    }
                     Value::Table(kind) if gives_settings(kind) => {
                         settings.insert(
                             name.clone(),
@@ -264,6 +293,7 @@ pub fn read_kinds(text: &str) -> Result<Declaration, Refusal> {
     }
     problems.finish(Declaration {
         kinds,
+        statecharts,
         settings,
         sections: unnamed(&root, &["kinds"]),
     })
@@ -319,22 +349,8 @@ fn read_agents(kind: &Table, at: &str, problems: &mut Problems) -> KindAgents {
 }
 
 fn read_kind(name: &str, kind: &Table, at: &str, problems: &mut Problems) -> Kind {
-    let version = match kind.get("version") {
-        None => 1,
-        Some(Value::Integer(version)) if *version >= 1 => version.unsigned_abs(),
-        Some(_) => {
-            problems.refuse(&field(at, "version"), "must be an integer of at least 1");
-            1
-        }
-    };
-    let branch = match kind.get("branch") {
-        None => name.to_owned(),
-        Some(Value::String(branch)) if !branch.is_empty() => branch.clone(),
-        Some(_) => {
-            problems.refuse(&field(at, "branch"), "must be a non-empty string");
-            name.to_owned()
-        }
-    };
+    let version = read_version(kind, at, problems);
+    let branch = read_branch(name, kind, at, problems);
     let starts_unready = boolean(kind, "starts_unready", at, problems);
     let before = problems.len();
     let lands = boolean(kind, "lands", at, problems);
@@ -345,8 +361,18 @@ fn read_kind(name: &str, kind: &Table, at: &str, problems: &mut Problems) -> Kin
     // as one or more: where `stages` is refused, it is named once and
     // neither is judged against it (57).
     let with_stages = !stages.is_empty();
-    let landing_fix = read_landing_fix(kind, with_stages, at, problems);
-    let max_landing_fixes = read_max_landing_fixes(kind, with_stages, at, problems);
+    let landing_fix = read_landing_fix(
+        kind,
+        with_stages.then_some(LANDING_FIX_WITH_STAGES),
+        at,
+        problems,
+    );
+    let max_landing_fixes = read_max_landing_fixes(
+        kind,
+        with_stages.then_some(MAX_LANDING_FIXES_WITH_STAGES),
+        at,
+        problems,
+    );
     Kind {
         name: name.to_owned(),
         version,
@@ -361,33 +387,63 @@ fn read_kind(name: &str, kind: &Table, at: &str, problems: &mut Problems) -> Kin
     }
 }
 
+/// A kind's `version`: an integer of at least 1, 1 when left out (51, 57,
+/// 94).
+pub(crate) fn read_version(kind: &Table, at: &str, problems: &mut Problems) -> u64 {
+    match kind.get("version") {
+        None => 1,
+        Some(Value::Integer(version)) if *version >= 1 => version.unsigned_abs(),
+        Some(_) => {
+            problems.refuse(&field(at, "version"), "must be an integer of at least 1");
+            1
+        }
+    }
+}
+
+/// A kind's `branch`: a non-empty string, the kind's name when left out
+/// (52, 94).
+pub(crate) fn read_branch(name: &str, kind: &Table, at: &str, problems: &mut Problems) -> String {
+    match kind.get("branch") {
+        None => name.to_owned(),
+        Some(Value::String(branch)) if !branch.is_empty() => branch.clone(),
+        Some(_) => {
+            problems.refuse(&field(at, "branch"), "must be a non-empty string");
+            name.to_owned()
+        }
+    }
+}
+
+/// Why a simple kind whose stages read as one or more names no landing fix
+/// (57).
+const LANDING_FIX_WITH_STAGES: &str = "is on a kind with stages, and only a kind that lands with no stages names its landing fix; a kind with stages names where a failed submission sends its place back by a stage's `on_fail`";
+
+/// Why a simple kind whose stages read as one or more names no bound on its
+/// landing fixes (57).
+const MAX_LANDING_FIXES_WITH_STAGES: &str = "is on a kind with stages, and only a kind that lands with no stages names how many landing fixes it runs; a kind with stages bounds its send-backs by a stage's `max_send_backs`";
+
 /// A kind's `landing_fix`, the kind a place runs when the merge queue
 /// sends its branch back: an identity with its version,
 /// `<source>/<name>@<version>`, returned as written; `None` when left out
-/// (52, C.4; record 0005). A value that is not a string, or a string that
-/// is no identity with its version, a bare name among them, is refused
-/// naming the field with why, and so is an identity on a kind
-/// `with_stages`, whose stages read as one or more, since only a kind that
-/// lands with no stages names it (57); which kind it names is the reader's
-/// (58; core.32).
-fn read_landing_fix(
+/// (52, 94, C.4; record 0005). A value that is not a string, or a string
+/// that is no identity with its version, a bare name among them, is refused
+/// naming the field with why, and so is an identity on a kind that may not
+/// name one, refused with `misplaced`, its reason (57); which kind it names
+/// is the reader's (58; core.32).
+pub(crate) fn read_landing_fix(
     kind: &Table,
-    with_stages: bool,
+    misplaced: Option<&str>,
     at: &str,
     problems: &mut Problems,
 ) -> Option<Identity> {
     let here = field(at, "landing_fix");
     match kind.get("landing_fix")? {
-        Value::String(text) => match text.parse() {
-            Ok(_) if with_stages => {
-                problems.refuse(
-                    &here,
-                    "is on a kind with stages, and only a kind that lands with no stages names its landing fix; a kind with stages names where a failed submission sends its place back by a stage's `on_fail`",
-                );
+        Value::String(text) => match (text.parse(), misplaced) {
+            (Ok(_), Some(misplaced)) => {
+                problems.refuse(&here, misplaced);
                 None
             }
-            Ok(landing_fix) => Some(landing_fix),
-            Err(refusal) => {
+            (Ok(landing_fix), None) => Some(landing_fix),
+            (Err(refusal), _) => {
                 problems.refuse(&here, refusal.to_string());
                 None
             }
@@ -403,26 +459,23 @@ fn read_landing_fix(
 }
 
 /// A kind's `max_landing_fixes`, how many landing fixes it runs: an
-/// integer of at least 0; `None` when left out (52, C.4; record 0005), its
-/// meaning then its reader's (58). Any other value is refused naming the
-/// field, and so is a count on a kind `with_stages`, whose stages read as
-/// one or more, since only a kind that lands with no stages names it (57).
-fn read_max_landing_fixes(
+/// integer of at least 0; `None` when left out (52, 94, C.4; record 0005),
+/// its meaning then its reader's (58). Any other value is refused naming
+/// the field, and so is a count on a kind that may not name one, refused
+/// with `misplaced`, its reason (57).
+pub(crate) fn read_max_landing_fixes(
     kind: &Table,
-    with_stages: bool,
+    misplaced: Option<&str>,
     at: &str,
     problems: &mut Problems,
 ) -> Option<u64> {
     let here = field(at, "max_landing_fixes");
-    match kind.get("max_landing_fixes")? {
-        Value::Integer(times) if *times >= 0 && with_stages => {
-            problems.refuse(
-                &here,
-                "is on a kind with stages, and only a kind that lands with no stages names how many landing fixes it runs; a kind with stages bounds its send-backs by a stage's `max_send_backs`",
-            );
+    match (kind.get("max_landing_fixes")?, misplaced) {
+        (Value::Integer(times), Some(misplaced)) if *times >= 0 => {
+            problems.refuse(&here, misplaced);
             None
         }
-        Value::Integer(times) if *times >= 0 => Some(times.unsigned_abs()),
+        (Value::Integer(times), None) if *times >= 0 => Some(times.unsigned_abs()),
         _ => {
             problems.refuse(&here, "must be an integer of at least 0");
             None

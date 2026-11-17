@@ -43,7 +43,7 @@ pub fn recsel_value(text: &str, name: &str) -> String {
     printed.strip_suffix('\n').unwrap_or(&printed).to_string()
 }
 
-use weir_capture::{CameIn, Capture, Key, RawFile, Taken};
+use weir_capture::{CameIn, Capture, Facts, Key, RawFile, Taken};
 use weir_signals::{InboxAt, NewMove, ReadSignal, SignalId, Write};
 
 /// The key `text`, which the test expects the rule to take.
@@ -64,6 +64,7 @@ pub fn capture(key_text: &str) -> Capture {
         machine: "deneb".into(),
         taken_at: "2026-10-17T04:30:05Z".into(),
         unread: true,
+        facts: Facts::new(),
     }
 }
 
@@ -100,13 +101,14 @@ pub fn empty() -> InboxAt {
 }
 
 /// `inbox` with the capture `key` taken, unread, and read into `n`
-/// signals, the excerpt of each a line of its one raw file.
+/// signals, the excerpt of each a line of its one raw file, `notes.md`, at
+/// that line.
 pub fn with_signals(inbox: &InboxAt, key_text: &str, n: usize) -> InboxAt {
     with_read(inbox, capture(key_text), n)
 }
 
 /// `inbox` with `taken` taken, unread, and read into `n` signals, the
-/// excerpt of each a line of its one raw file.
+/// excerpt of each a line of its one raw file, `notes.md`, at that line.
 pub fn with_read(inbox: &InboxAt, taken: Capture, n: usize) -> InboxAt {
     let key_text = taken.key.to_string();
     let key_text = key_text.as_str();
@@ -116,6 +118,7 @@ pub fn with_read(inbox: &InboxAt, taken: Capture, n: usize) -> InboxAt {
             .take(&Taken {
                 capture: taken,
                 own_signal: None,
+                rule_move: None,
             })
             .unwrap_or_else(|refused| panic!("{refused}")),
     );
@@ -126,16 +129,16 @@ pub fn with_read(inbox: &InboxAt, taken: Capture, n: usize) -> InboxAt {
         path: "notes.md".into(),
         bytes: lines.join("\n").into_bytes(),
     };
-    let reading: Vec<ReadSignal> = lines
-        .iter()
-        .map(|line| ReadSignal {
+    let reading: Vec<ReadSignal> = (1..)
+        .zip(&lines)
+        .map(|(n, line)| ReadSignal {
             kind: "ask".into(),
             asserted_by: "upstream".into(),
             assertion: format!("{line}, asserted"),
             subjects: Vec::new(),
             argues_with: Vec::new(),
             excerpt: line.clone(),
-            position: "the notes".into(),
+            position: format!("notes.md:{n}"),
         })
         .collect();
     let write = inbox

@@ -39,7 +39,10 @@ pub struct Package {
 /// and its bytes, as a tool holds its built-in kinds, and the identity it
 /// is held at (92). It gives the package's one kind, that identity and
 /// its content hash, or refuses the package whole, naming every field
-/// that fails it (57, 89).
+/// that fails it (57, 89). A statechart kind its `kind.toml` declares is
+/// counted among its kinds, and a package whose one kind is a statechart
+/// kind is refused naming the kind, since a package's one kind is a simple
+/// kind's (design 12 of the change that reads statechart kinds; core.43).
 ///
 /// A path is relative, with `/` between segments none of which is empty,
 /// `.` or `..`, and names one file; a path that is not, or that lies
@@ -239,15 +242,26 @@ fn read(
     };
 
     if let Some(declaration) = &declaration {
-        // Exactly one kind, and settings given to none other, which would
-        // name a kind outside the package (57, 89).
-        let names: Vec<_> = declaration
+        // Exactly one kind, of either format, and settings given to none
+        // other, which would name a kind outside the package (57, 89). A
+        // package whose one kind is a statechart kind is refused naming it,
+        // since a package's one kind is a simple kind's (design 12; core.43).
+        let mut names: Vec<&String> = declaration
             .kinds
             .keys()
-            .map(|name| format!("`{name}`"))
+            .chain(declaration.statecharts.keys())
             .collect();
+        names.sort();
+        let names: Vec<_> = names.into_iter().map(|name| format!("`{name}`")).collect();
         match names.len() {
-            1 => {}
+            1 => {
+                if let Some(name) = declaration.statecharts.keys().next() {
+                    problems.refuse(
+                        &format!("kinds.{}", key(name)),
+                        "is a statechart kind, and read-package reads a package of a simple kind alone",
+                    );
+                }
+            }
             0 => problems.refuse(
                 "kinds",
                 "declares no kind, and a package declares exactly one kind",

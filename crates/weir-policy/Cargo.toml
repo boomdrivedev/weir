@@ -1,0 +1,25 @@
+[package]
+name = "weir-policy"
+description = "The facts a signal carries, the people list they are joined from, and the keeper's policy, read and checked whole, and read for a signal or for a capture as it lands (statement 117 to 129; C.9)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+weir-cadence = { path = "../weir-cadence" }
+jiff.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+# The tests take their zones from jiff's bundled copy of the time zone
+# database, as weir-cadence's do, so a host's own copy cannot change a
+# result.
+[dev-dependencies]
+jiff = { workspace = true, features = ["tzdb-bundle-always"] }
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true

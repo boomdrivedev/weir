@@ -14,6 +14,7 @@ use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
 use crate::key::Key;
+use crate::Facts;
 
 /// One line an adapter tells its host (1).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -44,6 +45,10 @@ pub struct Offer {
     pub raw: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub excerpt: Option<Excerpt>,
+    /// The facts its source states, each spelled as C.9 spells it (2, 117;
+    /// core.6).
+    #[serde(skip_serializing_if = "Facts::is_empty")]
+    pub facts: Facts,
 }
 
 /// An own excerpt: every field of a signal (7, 25).
@@ -231,6 +236,12 @@ fn offer_fields(offer: &Map<String, Value>) -> Result<Offer, Malformed> {
         None | Some(Value::Null) => None,
         Some(value) => Some(read_excerpt(value)?),
     };
+    let facts = match offer.get("facts") {
+        None | Some(Value::Null) => Facts::new(),
+        Some(value) => {
+            Facts::stated(value).map_err(|error| Malformed::field(error.field, error.reason))?
+        }
+    };
     Ok(Offer {
         key,
         source,
@@ -239,6 +250,7 @@ fn offer_fields(offer: &Map<String, Value>) -> Result<Offer, Malformed> {
         url,
         raw,
         excerpt,
+        facts,
     })
 }
 
@@ -539,6 +551,41 @@ mod tests {
     }
 
     #[test]
+    fn an_offers_facts_are_read() {
+        let line = offer_line(
+            r#""key": "release/x", "source": "release", "event_at": "2026-10-10T14:02:11Z", "facts": {"level": "patch", "attendee": ["dana@acme.com"]}"#,
+        );
+        let Ok(Line::Offer(offer)) = read_line(&line) else {
+            panic!("not an offer");
+        };
+        let names: Vec<&str> = offer.facts.iter().map(|(name, _)| name).collect();
+        assert_eq!(names, ["attendee", "level"]);
+        assert_eq!(
+            offer.facts.get("level"),
+            Some(&[weir_policy::Value::Text("patch".into())][..])
+        );
+        assert_eq!(
+            offer.facts.get("attendee"),
+            Some(&[weir_policy::Value::Text("dana@acme.com".into())][..])
+        );
+        // An offer printed as a line carries its facts.
+        assert_eq!(
+            read_line(&Line::Offer(offer.clone()).to_json()),
+            Ok(Line::Offer(offer))
+        );
+    }
+
+    #[test]
+    fn an_offer_stating_a_fact_c9_does_not_spell() {
+        let malformed = refused(&offer_line(
+            r#""key": "release/x", "source": "release", "event_at": "2026-10-10T14:02:11Z", "facts": {"says": "request"}"#,
+        ));
+        assert_eq!(malformed.field.as_deref(), Some("facts.says"));
+        assert_eq!(malformed.key.as_deref(), Some("release/x"));
+        assert!(malformed.reason.contains("read fact"), "{malformed}");
+    }
+
+    #[test]
     fn a_bad_key_refuses_the_offer_naming_the_rule_and_the_key() {
         let malformed = refused(&offer_line(
             r#""key": "moves/x", "source": "release", "event_at": "2026-10-10T14:02:11Z""#,
@@ -693,6 +740,7 @@ mod tests {
                 argues_with: vec![],
                 position: "release notes".into(),
             }),
+            facts: Facts::new(),
         });
         let bare = Line::Offer(Offer {
             key: Key::parse("deploy/a/1").unwrap(),
@@ -702,6 +750,7 @@ mod tests {
             url: None,
             raw: vec![],
             excerpt: None,
+            facts: Facts::new(),
         });
         let cursor = Line::Cursor("page=3&since=2026-10-17\n".into());
         let done = Line::Done(Completion {

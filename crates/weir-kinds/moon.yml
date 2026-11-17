@@ -2,17 +2,19 @@ $schema: 'https://moonrepo.dev/schemas/project.json'
 
 # The kind format's reader: its format, lint, typecheck and test, one task
 # per check (core.39). It builds on weir-capture, whose sha256 a
-# package's content hash is computed through (core.44). Each task names
-# every file it reads, weir-capture's, the toolchain's and the pack's
-# kinds cases among them, so a replayed pass stands for a run on the same
-# inputs (kit:testing.3).
+# package's content hash is computed through (core.44), and weir-engine,
+# whose types a statechart kind is read into (core.54). Each task names
+# every file it reads, weir-capture's, weir-policy's and weir-cadence's,
+# which weir-capture builds on, weir-engine's, the toolchain's and the
+# pack's kinds cases among them, so a replayed pass stands for a run on
+# the same inputs (kit:testing.3).
 language: 'rust'
-dependsOn: [capture]
+dependsOn: [capture, engine]
 
 tasks:
   format:
     command: 'cargo fmt -p weir-kinds --check'
-    inputs: &inputs ['/crates/weir-kinds/**/*', '/crates/weir-capture/**/*', '/pack/kinds/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: &inputs ['/crates/weir-kinds/**/*', '/crates/weir-engine/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/pack/kinds/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   lint:

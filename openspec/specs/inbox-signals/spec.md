@@ -9,7 +9,7 @@ and the batches moves are proposed in (25 to 33; C.2).
 
 ### Requirement: A signal holds every field, and its nature is one of five
 
-A signal SHALL be recorded as `weir-signal/1` with its identity, its nature in the field `kind`, who asserted it, what it asserts, its subjects and what it argues with (each a list, possibly empty), its excerpt and where it stands (25; C.2; record 0002). A signal lacking a field, or whose nature is not constraint, ask, question, commitment or reaction, SHALL be refused naming the field.
+A signal SHALL be recorded as `weir-signal/1` with its identity, its nature in the field `kind`, who asserted it, what it asserts, its subjects and what it argues with (each a list, possibly empty), its excerpt and where it stands (25; C.2; record 0002). A signal lacking a field, or whose nature is not constraint, ask, question, commitment or reaction, SHALL be refused naming the field, but for an own signal a rule made, which has no nature (127).
 
 #### Scenario: A signal of an unknown nature
 
@@ -21,9 +21,19 @@ A signal SHALL be recorded as `weir-signal/1` with its identity, its nature in t
 - **WHEN** a signal with no subjects and nothing it argues with is written and read back
 - **THEN** it reads back with both lists empty
 
+#### Scenario: An own signal a rule made has no nature
+
+- **WHEN** a tip holds a capture, not unread, titled `Daily stand-up`, whose one signal `#1` has no `kind`, its excerpt and assertion `Daily stand-up`, asserted by its source, at `title`
+- **THEN** the inbox reads, and the signal reads back with no nature
+
+#### Scenario: A signal of no nature that no rule made
+
+- **WHEN** a tip holds an unread capture whose reading's signal `#1` has no `kind`
+- **THEN** reading the inbox is refused, naming the path of its `signals.rec` and `kind`
+
 ### Requirement: A capture's own signal is recorded in the same write as the capture
 
-The capture and own signal the capture crate hands over SHALL be written in one write as `capture.rec` and a `signals.rec` holding the one signal `<key>#1`, its excerpt as cut and, where it was cut, a `cut` field giving the lines and bytes left out as `<n> lines and <b> bytes` (19, 20, 27; core.13). A capture with no own signal SHALL be written with no `signals.rec`.
+The capture, own signal and rule's move the capture crate hands over SHALL be written in one write as `capture.rec`, a `signals.rec` holding the one signal `<key>#1`, its excerpt as cut and, where cut, a `cut` field of the lines and bytes left out as `<n> lines and <b> bytes`, the move appended to `moves.rec`, and the item it makes (19, 20, 27, 126; core.13). A capture with no own signal SHALL be written with no `signals.rec`.
 
 #### Scenario: A cut own signal
 
@@ -39,6 +49,21 @@ The capture and own signal the capture crate hands over SHALL be written in one 
 
 - **WHEN** the capture crate hands over a capture under a key the inbox holds
 - **THEN** it is refused as held and nothing is written (14)
+
+#### Scenario: A rule's drop in the capture's write
+
+- **WHEN** the capture crate hands over a meeting's capture, its rule's own signal and `stand-ups`' drop with the reason `a stand-up`
+- **THEN** one write adds `capture.rec`, `signals.rec` and the drop of `#1` appended to `moves.rec`, its target and its note `a stand-up`
+
+#### Scenario: A rule's join makes its item in the capture's write
+
+- **WHEN** the capture crate hands over a release's capture, its own signal and `point-releases`' join naming `point-releases-20261112T103000Z`, and the inbox holds no item of that rule
+- **THEN** one write adds `capture.rec`, `signals.rec`, the join appended to `moves.rec`, and the item's `item.rec`
+
+#### Scenario: A daily stand-up dropped as it lands
+
+- **WHEN** a meeting's offer titled `Daily stand-up`, with no excerpt, stating its length and three attendees, is taken with C.9's policy through an inbox over its tip
+- **THEN** one write adds the capture, not unread, one own signal of the title with no nature, and a drop by `rule:stand-ups`, and no reader is charged with the capture (S27)
 
 ### Requirement: Signals are numbered in reading order
 
@@ -84,17 +109,47 @@ A reading SHALL be written whole, or refused whole naming each signal that could
 
 ### Requirement: A signal's excerpt stands verbatim in its capture's raw material
 
-A reader's signal SHALL be taken only when its excerpt stands, byte for byte, in one of the raw material files the writer hands in for that capture; otherwise the reading SHALL be refused naming the signal (26; core.16). The own signal's excerpt is the own excerpt as cut and is not looked for in raw material.
+A reader's signal whose position holds SHALL be taken only when its excerpt is one unbroken run of the text of the file its position names, beginning on the line it names, `\r\n` evened to `\n` in both; otherwise the reading SHALL be refused naming the signal and `excerpt` (26; record 0010; core.16). No whitespace or letter's case SHALL be evened, and the excerpt SHALL be written as the reader handed it. The own signal's excerpt is the own excerpt as cut and is not looked for in raw material.
 
 #### Scenario: A paraphrase
 
-- **WHEN** a reading's signal has an excerpt that stands in none of the capture's raw files, though its words are close
-- **THEN** the reading is refused, naming that signal
+- **WHEN** a reading's signal has an excerpt whose words are close to the transcript's second line but not its own, at `transcript.txt:2`
+- **THEN** the reading is refused, naming that signal and `excerpt`
 
 #### Scenario: Verbatim across lines
 
-- **WHEN** a signal's excerpt is two whole lines of a raw transcript, as they stand there
+- **WHEN** a signal's excerpt is the second and third lines of a raw transcript, as they stand there, at `transcript.txt:2`
 - **THEN** it is taken
+
+#### Scenario: Words from within a line
+
+- **WHEN** a signal's excerpt is the words after the speaker's name on the transcript's second line, at `transcript.txt:2`
+- **THEN** it is taken
+
+#### Scenario: Line endings evened
+
+- **WHEN** a raw transcript ends its lines with `\r\n`, and a signal's excerpt is its second and third lines ended with `\n`, at `transcript.txt:2`
+- **THEN** it is taken, and its signal is written with the excerpt's `\n` line endings, as the reader handed it
+
+#### Scenario: An excerpt on another line
+
+- **WHEN** a signal's excerpt is the transcript's third line, at `transcript.txt:2`
+- **THEN** the reading is refused, naming that signal and `excerpt`
+
+#### Scenario: An excerpt in another file
+
+- **WHEN** a signal's excerpt stands in `transcript.txt` alone, and its position names `notes.md:1`, which the writer hands in too
+- **THEN** the reading is refused, naming that signal and `excerpt`
+
+#### Scenario: An excerpt across two files
+
+- **WHEN** a signal's excerpt is the last line of `notes.md` followed by the first line of `transcript.txt`, at `notes.md`'s last line
+- **THEN** the reading is refused, naming that signal and `excerpt`
+
+#### Scenario: Whitespace and case kept
+
+- **WHEN** a signal's excerpt is the transcript's second line with two spaces where it holds one, or with a capital where it holds none, at `transcript.txt:2`
+- **THEN** the reading is refused, naming that signal and `excerpt`
 
 ### Requirement: A signal has at most one standing move
 
@@ -218,3 +273,74 @@ No operation SHALL delete or omit a signal, however old, and every unmoved signa
 
 - **WHEN** a signal whose capture's event time is two years before now has no standing move
 - **THEN** it is listed among the unmoved signals with that event time, and no operation removes it
+
+### Requirement: A reader's signal names its excerpt's file and line
+
+A reader's signal SHALL be taken only when its position names, as `<path>:<line>`, one of the raw files the writer hands in for that capture; otherwise the reading SHALL be refused naming the signal and `position`, and its excerpt is not looked for (26; record 0010; core.16). `<path>` SHALL be everything before the position's last `:`, not empty, and equal byte for byte to the path a raw file is handed in under; `<line>` SHALL be a whole number of at least 1 with no sign or leading zero.
+
+#### Scenario: A position naming no file and line
+
+- **WHEN** a signal's position is `the transcript`, or `transcript.txt`, or `:2`
+- **THEN** the reading is refused, naming that signal and `position`
+
+#### Scenario: A line spelled otherwise
+
+- **WHEN** a signal's position is `transcript.txt:0`, `transcript.txt:02`, `transcript.txt:+2` or `transcript.txt:2a`
+- **THEN** the reading is refused, naming that signal and `position`
+
+#### Scenario: A position naming a file not handed in
+
+- **WHEN** a signal's position is `minutes.txt:1`, and the writer hands in `transcript.txt` alone
+- **THEN** the reading is refused, naming that signal and `position`
+
+#### Scenario: A capture with nothing banked
+
+- **WHEN** a reading of one signal is written for a capture, and the writer hands in no raw file
+- **THEN** the reading is refused, naming that signal and `position`, and a reading of none is taken for that capture
+
+#### Scenario: A path holding a colon
+
+- **WHEN** the writer hands in the transcript as `meeting:12/transcript.txt`, and a signal's excerpt is its second line, at `meeting:12/transcript.txt:2`
+- **THEN** it is taken
+
+### Requirement: A position's line is counted in its evened file
+
+A reader's signal SHALL be taken only when the `<line>` its position names is a line of the file it names, the file's lines counted from 1 after every `\r\n` is evened to `\n`, a last line with no line ending among them; otherwise the reading SHALL be refused naming the signal and `position`, and its excerpt is not looked for (26; record 0010; core.16).
+
+#### Scenario: A line past the file's end
+
+- **WHEN** a signal's position is `transcript.txt:4`, and the transcript has three lines, each ended by `\n`
+- **THEN** the reading is refused, naming that signal and `position`
+
+#### Scenario: A last line with no line ending
+
+- **WHEN** a raw file holds `first\nsecond`, and a signal's excerpt is `second`, at that file's line 2
+- **THEN** it is taken
+
+### Requirement: An own signal a rule made is its capture's title
+
+An own signal with no nature SHALL be taken only with a rule's move, and only as `<key>#1` with its excerpt and assertion its capture's title, or its key where it has none, asserted by its capture's source, at `title`, with no subjects, argument or cut; any other SHALL be refused naming the field. Its excerpt stands in its capture's offer and SHALL NOT be looked for in raw material (26, 127; core.16).
+
+#### Scenario: A rule's signal whose excerpt is not the title
+
+- **WHEN** the capture crate hands over a capture titled `Daily stand-up` with an own signal of no nature whose excerpt is `Weekly stand-up`, and a rule's drop
+- **THEN** it is refused, naming `excerpt`, and nothing is written
+
+#### Scenario: A signal of no nature with no rule's move
+
+- **WHEN** the capture crate hands over a capture with an own signal of no nature and no rule's move
+- **THEN** it is refused, naming `signal`, and nothing is written
+
+### Requirement: A rule's move stands once written, in no batch
+
+A rule's move SHALL be a join or a drop of its capture's own signal, by `rule:<name>`, at the capture's taken-at time, in no batch, and SHALL stand once written; a drop's reason SHALL be its target and its note. A rule's move with no own signal SHALL be refused naming `signal` (29 to 32, 128; core.18, core.19, core.60).
+
+#### Scenario: A rule's move names its rule
+
+- **WHEN** `point-releases`' join of `release/x/1.2.1#1` is written
+- **THEN** its record names `by: rule:point-releases` and the capture's taken-at time, holds no `batch`, and it is the signal's standing move
+
+#### Scenario: A rule's move with no signal
+
+- **WHEN** the capture crate hands over a capture with no own signal and a rule's drop
+- **THEN** it is refused, naming `signal`, and nothing is written

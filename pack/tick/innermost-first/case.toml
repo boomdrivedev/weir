@@ -1,0 +1,87 @@
+# The lamp is ticked in `on`, `level` in `dim`, with `lamp.level` read 7 and
+# `lamp.faulty` read `true`. `level`, the inner region, moves to `bright`
+# first, and then `power` moves to `off`, each once (96).
+satisfies = [96]
+declaration = """
+[kinds.lamp]
+version = 1
+title = "Lamp"
+
+[kinds.lamp.regions.power]
+initial = "off"
+
+[kinds.lamp.regions.power.states.off]
+decision = { kind = "switch", answers = ["on", "mode <name>"] }
+transitions = [
+  { when = { response = "mode <name>" }, to = "off", effects = [
+    { do = "set_mode", args = { mode = "$response" } },
+  ] },
+  { when = { response = "on" }, to = "on" },
+  { when = { ev = "lamp.switch", is = "up" }, to = "on" },
+]
+
+[kinds.lamp.regions.power.states.on]
+entry = [{ do = "light" }]
+machine = "bulb"
+transitions = [
+  { when = { final = "burnt" }, to = "off", bump = "burnouts" },
+  { when = { any = [
+    { ev = "lamp.faulty", is = true },
+    { response = "off" },
+  ] }, to = "off" },
+  { when = { ev = "lamp.switch", is = "down" }, to = "off", enter = { bulb = "cold" } },
+]
+
+[kinds.lamp.regions.power.states.on.regions.level]
+initial = "dim"
+
+[kinds.lamp.regions.power.states.on.regions.level.states.dim]
+transitions = [{ when = { ev = "lamp.level", gte = 5 }, to = "bright" }]
+
+[kinds.lamp.regions.power.states.on.regions.level.states.bright]
+
+[kinds.bulb]
+version = 1
+title = "Bulb"
+
+[kinds.bulb.regions.glow]
+initial = "warming"
+
+[kinds.bulb.regions.glow.states.warming]
+transitions = [
+  { when = { ev = "bulb.warm", is = true }, to = "lit" },
+  { when = { ev = "bulb.burnt", is = true }, to = "burnt" },
+]
+
+[kinds.bulb.regions.glow.states.lit]
+transitions = [{ when = { ev = "bulb.burnt", is = true }, to = "burnt" }]
+
+[kinds.bulb.regions.glow.states.burnt]
+final = true
+
+[kinds.bulb.regions.glow.states.cold]
+final = true
+entry = [{ do = "cool" }]
+"""
+chart = "lamp"
+proofs = { light = "lamp.lit", cool = "bulb.cool" }
+
+[state]
+regions = { power = "on", "power.on.glow" = "warming", "power.on.level" = "dim" }
+entered_at = { power = 2026-09-04T12:00:00Z, "power.on.glow" = 2026-09-04T12:00:00Z, "power.on.level" = 2026-09-04T12:00:00Z }
+
+[snapshot]
+at = 2026-09-04T12:01:00Z
+evidence = { "lamp.level" = 7, "lamp.faulty" = true }
+
+[expect]
+fired = [
+  { region = "power.on.level", from = "dim", to = "bright", effects = [
+  ] },
+  { region = "power", from = "on", to = "off", effects = [
+  ] },
+]
+
+[expect.next]
+regions = { power = "off", "power.on.glow" = "warming", "power.on.level" = "bright" }
+entered_at = { power = 2026-09-04T12:01:00Z, "power.on.glow" = 2026-09-04T12:00:00Z, "power.on.level" = 2026-09-04T12:01:00Z }

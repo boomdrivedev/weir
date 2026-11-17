@@ -12,10 +12,12 @@ fn the_statements_sections() -> Vec<(&'static str, Vec<Clause>)> {
     b2.extend(range(76, 77));
     let mut a8 = range(51, 58);
     a8.extend(range(88, 91));
+    // 94 and 95, statechart kinds, stand under A.8; 96 to 98, the engine,
+    // under A.13; and 99, the tick, under B.4.
+    a8.extend(range(94, 95));
     let mut b4 = range(81, 82);
     b4.extend(range(92, 93));
-    // 94 to 99, statechart kinds and the engine, stay out of the index
-    // until weir's statechart change takes them in with their cases.
+    b4.push(Clause::number(99));
     vec![
         ("A.1", range(1, 12)),
         ("A.2", range(13, 24)),
@@ -29,6 +31,7 @@ fn the_statements_sections() -> Vec<(&'static str, Vec<Clause>)> {
         ("A.10", range(61, 64)),
         ("A.11", range(65, 68)),
         ("A.12", range(69, 71)),
+        ("A.13", range(96, 98)),
         ("A.14", range(100, 107)),
         ("B.1", range(72, 74)),
         ("B.2", b2),
@@ -66,15 +69,16 @@ fn the_index_holds_every_clause_under_its_section() {
         .flat_map(|section| section.clauses.clone())
         .collect();
     assert_eq!(index.commit, "006fc34");
-    assert_eq!(all.len(), 108, "1 to 93, 75a and 100 to 113, each once");
+    assert_eq!(all.len(), 114, "1 to 99, 75a and 100 to 113, each once");
 }
 
 #[test]
-fn the_check_counts_a1_to_a10_a14_and_71() {
+fn the_check_counts_a1_to_a10_a13_a14_and_71() {
     let counted = the_packs_index().counted().unwrap();
     let mut expected: Vec<Clause> = (1..=64).map(Clause::number).collect();
     expected.push(Clause::number(71));
     expected.extend((88..=91).map(Clause::number));
+    expected.extend((94..=98).map(Clause::number));
     expected.extend((100..=107).map(Clause::number));
     assert_eq!(counted.into_iter().collect::<Vec<_>>(), expected);
 }

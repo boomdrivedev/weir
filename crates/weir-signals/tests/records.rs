@@ -44,7 +44,9 @@ fn formed(inbox: &InboxAt, write: Write) -> InboxAt {
         .unwrap_or_else(|refused| panic!("{refused}"))
 }
 
-fn read_signal(excerpt: &str, kind: &str) -> ReadSignal {
+/// A reader's signal of `excerpt` and `kind`, at `position`, which names
+/// a raw file and the line the excerpt begins on (core.16).
+fn read_signal(excerpt: &str, kind: &str, position: &str) -> ReadSignal {
     ReadSignal {
         kind: kind.into(),
         asserted_by: "Ana".into(),
@@ -52,7 +54,7 @@ fn read_signal(excerpt: &str, kind: &str) -> ReadSignal {
         subjects: vec!["mise".into(), "shim".into()],
         argues_with: Vec::new(),
         excerpt: excerpt.into(),
-        position: "the transcript, line 2".into(),
+        position: position.into(),
     }
 }
 
@@ -63,7 +65,7 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
     // A capture with its cut own signal, and an unread capture.
     let own = OwnSignal {
         signal: "release/mise/2026.10.10#1".into(),
-        kind: Nature::Ask,
+        kind: Some(Nature::Ask),
         asserted_by: "jdx/mise".into(),
         assertion: "mise 2026.10.10 is released".into(),
         subjects: vec!["release".into()],
@@ -82,16 +84,19 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
             ..capture("release/mise/2026.10.10")
         },
         own_signal: Some(own.clone()),
+        rule_move: None,
     };
     inbox = formed(&inbox, inbox.take(&release).unwrap());
     let meeting = Taken {
         capture: capture("meeting/file/ab12"),
         own_signal: None,
+        rule_move: None,
     };
     inbox = formed(&inbox, inbox.take(&meeting).unwrap());
     let empty_reading = Taken {
         capture: capture("folder/notes/cd34"),
         own_signal: None,
+        rule_move: None,
     };
     inbox = formed(&inbox, inbox.take(&empty_reading).unwrap());
 
@@ -102,9 +107,9 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
         bytes: transcript.as_bytes().to_vec(),
     };
     let reading = [
-        read_signal("the shim times out\\", "constraint"),
-        read_signal("we pin mise", "commitment"),
-        read_signal("Ana: we ask upstream\n", "question"),
+        read_signal("the shim times out\\", "constraint", "transcript.txt:1"),
+        read_signal("we pin mise", "commitment", "transcript.txt:2"),
+        read_signal("Ana: we ask upstream\n", "question", "transcript.txt:3"),
     ];
     let meeting_key = key("meeting/file/ab12");
     inbox = formed(
@@ -287,6 +292,9 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
             made_by: MadeBy::Join,
             named_by: "curation".into(),
             named_at: AT.into(),
+            rule: None,
+            priority: None,
+            closed_at: None,
         }
     );
     let pin = read.item("pin-mise").unwrap();

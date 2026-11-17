@@ -1,0 +1,32 @@
+# S21's second tick: S21's lamp is ticked in `on` with `lamp.lit` read
+# `true`. Nothing fires, and the next state is the state given (96, 98, 99;
+# S21).
+satisfies = [96, 98, 99]
+declaration = """
+[kinds.lamp]
+version = 1
+title = "Lamp"
+
+[kinds.lamp.regions.power]
+initial = "off"
+
+[kinds.lamp.regions.power.states.off]
+transitions = [{ when = { ev = "lamp.switch", is = "up" }, to = "on" }]
+
+[kinds.lamp.regions.power.states.on]
+entry = [{ do = "light" }]
+"""
+chart = "lamp"
+proofs = { light = "lamp.lit" }
+
+[state]
+regions = { power = "on" }
+entered_at = { power = 2026-09-04T12:01:00Z }
+
+[snapshot]
+at = 2026-09-04T12:02:00Z
+evidence = { "lamp.lit" = true }
+
+[expect]
+fired = []
+next = { regions = { power = "on" }, entered_at = { power = 2026-09-04T12:01:00Z } }

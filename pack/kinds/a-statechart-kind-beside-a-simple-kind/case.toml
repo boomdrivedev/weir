@@ -1,0 +1,101 @@
+# S19: a simple kind, bump, with stages code and review, and C.4's
+# statechart kind, persona, whose test state runs the stage template with a
+# rule for its agents and joins all, as the kinds crate's
+# tests/fixtures/persona.toml holds them. read-kinds gives bump with its
+# stages and persona with its statechart, each as written, and reads both
+# the same twice (51, 81, 94; C.4).
+satisfies = [51, 81, 94]
+declaration = """
+[kinds.bump]
+version = 2
+
+[[kinds.bump.stages]]
+name = "code"
+prompt = "prompts/bump-code.md"
+deliverables = ["commits"]
+
+[[kinds.bump.stages]]
+name = "review"
+prompt = "prompts/bump-review.md"
+conversation = true
+
+[kinds.persona]
+version = 1
+title = "Persona test" # the words a person reads for the kind (94)
+branch = "persona"     # as a simple kind's (52)
+
+[kinds.persona.regions.stages]
+initial = "build" # one of the region's states (95)
+
+[kinds.persona.regions.stages.states.build]
+machine = "stage" # the template or statechart the state runs, by name (94)
+params = { agents = [
+  { model = "opus" },
+], join = "all", on_fail = "build", max_send_backs = 2, deliverables = [
+  "commits",
+] }
+transitions = [ # in priority order (96)
+  { when = { final = "passed" }, to = "test" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.test]
+machine = "stage"
+params = { agents = { rule = "every-persona-definition", pattern = "personas/*.md" }, join = "all", on_fail = "build", max_send_backs = 2, deliverables = [
+  "committed:tests/personas.md",
+] }
+transitions = [
+  { when = { final = "passed" }, to = "passed" },
+  { when = { final = "sent-back" }, to = "build" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.passed]
+final = true
+
+[kinds.persona.regions.stages.states.stopped]
+decision = { kind = "stalled", answers = [
+  "retry",
+  "drop",
+] } # a decision while the state is active (97)
+transitions = [
+  { when = { response = "retry" }, to = "build" },
+  { when = { response = "drop" }, to = "dropped" },
+]
+
+[kinds.persona.regions.stages.states.dropped]
+final = true
+"""
+
+[expect.kinds.bump]
+version = 2
+stages = [
+  { name = "code", end = "commits" },
+  { name = "review", end = "conversation" },
+]
+
+[expect.statecharts.persona]
+version = 1
+title = "Persona test"
+
+[expect.statecharts.persona.regions.stages]
+initial = "build"
+states.build = { machine = "stage", to = ["test", "stopped"] }
+states.dropped = { final = true }
+states.passed = { final = true }
+states.stopped = { answers = ["retry", "drop"], to = ["build", "dropped"] }
+states.test = { machine = "stage", to = ["passed", "build", "stopped"] }
+
+[expect.statecharts.persona.params."stages.build"]
+agents = "entries 1"
+join = "all"
+on_fail = "build"
+max_send_backs = 2
+deliverables = ["commits"]
+
+[expect.statecharts.persona.params."stages.test"]
+agents = "rule every-persona-definition"
+join = "all"
+on_fail = "build"
+max_send_backs = 2
+deliverables = ["committed:tests/personas.md"]

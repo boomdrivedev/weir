@@ -50,6 +50,9 @@ fn an_item_from_a_conclusion() {
             made_by: MadeBy::Conclusion("inquiry/toolchain#3".into()),
             named_by: "operator".into(),
             named_at: AT.into(),
+            rule: None,
+            priority: None,
+            closed_at: None,
         }
     );
     assert!(!item.is_sent());
@@ -215,6 +218,9 @@ fn an_item_record_out_of_shape_is_refused_naming_the_field() {
         made_by: MadeBy::Conclusion("inquiry/toolchain#3".into()),
         named_by: "operator".into(),
         named_at: AT.into(),
+        rule: None,
+        priority: None,
+        closed_at: None,
     };
     let written = rec::write(&[item.to_record()]);
     let read = |text: &str| Item::from_record(&rec::read(text).unwrap()[0]);
@@ -236,4 +242,76 @@ fn an_item_record_out_of_shape_is_refused_naming_the_field() {
     // An item.rec names the item its folder is.
     let error = InboxAt::read([("inbox/items/other/item.rec", written.as_str())]).unwrap_err();
     assert_eq!(error.field.as_deref(), Some("item"));
+}
+
+/// The `item.rec` of a join's item `name`, with `extra` fields after
+/// `named_at`.
+fn joins_item(name: &str, extra: &str) -> String {
+    format!(
+        "format: weir-item/1\nitem: {name}\nmade_by: join\nnamed_by: rule:point-releases\nnamed_at: {AT}\n{extra}"
+    )
+}
+
+fn refused_item(text: &str) -> weir_signals::InboxError {
+    recfix(text);
+    InboxAt::read([("inbox/items/point-releases-20261112T103000Z/item.rec", text)]).unwrap_err()
+}
+
+#[test]
+fn a_rules_item_with_a_rule_and_no_priority() {
+    let name = "point-releases-20261112T103000Z";
+    let error = refused_item(&joins_item(name, "rule: point-releases\n"));
+    assert_eq!(error.path, format!("inbox/items/{name}/item.rec"));
+    assert_eq!(error.field.as_deref(), Some("priority"));
+    // Nor a priority with no rule, a rule not spelled as a rule's name, or
+    // a priority not of the five.
+    for (extra, field) in [
+        ("priority: low\n", "priority"),
+        ("rule: point_releases\npriority: low\n", "rule"),
+        ("rule: point-releases\npriority: lowest\n", "priority"),
+    ] {
+        let error = refused_item(&joins_item(name, extra));
+        assert_eq!(error.field.as_deref(), Some(field), "{extra}");
+    }
+    // Nor a rule on an item a conclusion made.
+    let concluded = format!(
+        "format: weir-item/1\nitem: {name}\nmade_by: conclusion\nconclusion: inquiry/x#1\nnamed_by: operator\nnamed_at: {AT}\nrule: point-releases\npriority: low\n"
+    );
+    assert_eq!(refused_item(&concluded).field.as_deref(), Some("rule"));
+    // A rule's item reads back as written, and is its rule's current item
+    // until it says its window closed.
+    let text = joins_item(name, "rule: point-releases\npriority: low\n");
+    recfix(&text);
+    let inbox = InboxAt::read([(format!("inbox/items/{name}/item.rec"), text.clone())]).unwrap();
+    let item = &inbox.item(name).unwrap().item;
+    assert_eq!(item.rule.as_deref(), Some("point-releases"));
+    assert_eq!(item.priority, Some(weir_policy::Priority::Low));
+    assert_eq!(rec::write(&[item.to_record()]), text);
+    assert_eq!(
+        inbox
+            .rule_item("point-releases")
+            .map(|at| at.item.item.as_str()),
+        Some(name)
+    );
+    assert!(inbox.rule_item("a-clients-ask").is_none());
+    let closed = joins_item(
+        name,
+        "rule: point-releases\npriority: low\nclosed_at: 2026-11-12T10:30:00Z\n",
+    );
+    recfix(&closed);
+    let inbox = InboxAt::read([(format!("inbox/items/{name}/item.rec"), closed)]).unwrap();
+    assert!(inbox.rule_item("point-releases").is_none());
+}
+
+#[test]
+fn a_closed_at_on_an_item_no_rule_made() {
+    let name = "point-releases-20261112T103000Z";
+    let error = refused_item(&joins_item(name, "closed_at: 2026-11-12T10:30:00Z\n"));
+    assert_eq!(error.path, format!("inbox/items/{name}/item.rec"));
+    assert_eq!(error.field.as_deref(), Some("closed_at"));
+    let error = refused_item(&joins_item(
+        name,
+        "rule: point-releases\npriority: low\nclosed_at: half past ten\n",
+    ));
+    assert_eq!(error.field.as_deref(), Some("closed_at"));
 }

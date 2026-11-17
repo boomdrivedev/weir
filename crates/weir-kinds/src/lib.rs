@@ -20,6 +20,16 @@
 //! places never looks inside it, and whoever runs elaborations reads it
 //! with [`read_elaboration`] (55, 56).
 //!
+//! A `[kinds.<kind>]` table holding `regions` and no `stages` is a
+//! statechart kind, a [`StatechartKind`]: `read-kinds` returns it in the
+//! declaration's `statecharts`, beside the simple kinds in its `kinds`,
+//! its statechart read into the engine's types, the kind's name and
+//! version the statechart's own, and each state's stage-template
+//! parameters read by the state's path (51, 81, 94; C.4; core.54). A
+//! statechart kind is checked whole, as a simple kind is (95). The engine's
+//! crate is re-exported whole, as [`weir_engine`], so that a reader names a
+//! statechart's types at the version `read-kinds` reads into (section 9).
+//!
 //! A read depends on the text alone and changes nothing (58, 82). Which
 //! declaration a kind's name resolves to, among a tool's own, a
 //! repository's and a launch's, and how settings given to a kind declared
@@ -64,6 +74,7 @@
 mod deliverable;
 mod elaboration;
 mod fields;
+mod guard;
 mod hash;
 mod identity;
 mod kinds;
@@ -73,6 +84,7 @@ mod package;
 mod quiet;
 mod refusal;
 mod repeat;
+mod statechart;
 
 pub use deliverable::{Deliverable, End};
 pub use elaboration::{read_elaboration, Elaboration, Ending};
@@ -84,6 +96,10 @@ pub use name::{check_name, NameRefusal};
 pub use package::{read_package, read_package_dir, Package};
 pub use refusal::{Problem, Refusal};
 pub use repeat::Repeat;
+pub use statechart::{Join, ParamAgents, Params, StatechartKind};
 /// The TOML crate whose values a section the format does not name holds
 /// (56), so that a caller reads them with the same version.
 pub use toml;
+/// The engine's crate, whose types a statechart kind's statechart is read
+/// into (81, C.4; section 9), so that a caller names the same version.
+pub use weir_engine;

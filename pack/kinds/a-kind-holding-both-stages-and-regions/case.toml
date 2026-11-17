@@ -1,0 +1,81 @@
+# S19: beside bump and persona, a third kind's table holds both `stages`
+# and `regions`. It is refused naming its `regions`, and nothing else of it
+# is read, though its version, title and region would each fail (95; C.4).
+satisfies = [95]
+declaration = """
+[kinds.bump]
+version = 2
+
+[[kinds.bump.stages]]
+name = "code"
+prompt = "prompts/bump-code.md"
+deliverables = ["commits"]
+
+[[kinds.bump.stages]]
+name = "review"
+prompt = "prompts/bump-review.md"
+conversation = true
+
+[kinds.persona]
+version = 1
+title = "Persona test" # the words a person reads for the kind (94)
+branch = "persona"     # as a simple kind's (52)
+
+[kinds.persona.regions.stages]
+initial = "build" # one of the region's states (95)
+
+[kinds.persona.regions.stages.states.build]
+machine = "stage" # the template or statechart the state runs, by name (94)
+params = { agents = [
+  { model = "opus" },
+], join = "all", on_fail = "build", max_send_backs = 2, deliverables = [
+  "commits",
+] }
+transitions = [ # in priority order (96)
+  { when = { final = "passed" }, to = "test" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.test]
+machine = "stage"
+params = { agents = { rule = "every-persona-definition", pattern = "personas/*.md" }, join = "all", on_fail = "build", max_send_backs = 2, deliverables = [
+  "committed:tests/personas.md",
+] }
+transitions = [
+  { when = { final = "passed" }, to = "passed" },
+  { when = { final = "sent-back" }, to = "build" },
+  { when = { final = "stopped" }, to = "stopped" },
+]
+
+[kinds.persona.regions.stages.states.passed]
+final = true
+
+[kinds.persona.regions.stages.states.stopped]
+decision = { kind = "stalled", answers = [
+  "retry",
+  "drop",
+] } # a decision while the state is active (97)
+transitions = [
+  { when = { response = "retry" }, to = "build" },
+  { when = { response = "drop" }, to = "dropped" },
+]
+
+[kinds.persona.regions.stages.states.dropped]
+final = true
+
+[kinds.both]
+version = 0
+title = ""
+
+[[kinds.both.stages]]
+name = "code"
+prompt = "prompts/code.md"
+deliverables = ["commits"]
+
+[kinds.both.regions.main]
+initial = "nowhere"
+"""
+
+[[expect.refused]]
+field = "kinds.both.regions"
+reason_holds = "is declared beside `stages`"

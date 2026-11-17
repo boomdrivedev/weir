@@ -1342,6 +1342,7 @@ dependencies = [
 name = "weir-capture"
 version = "0.0.0"
 dependencies = [
+ "jiff",
  "jsonschema",
  "serde",
  "serde_json",
@@ -1349,6 +1350,7 @@ dependencies = [
  "tempfile",
  "time",
  "toml",
+ "weir-policy",
 ]
 
 [[package]]
@@ -1362,6 +1364,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "weir-engine"
+version = "0.0.0"
+dependencies = [
+ "time",
+ "toml",
+]
+
+[[package]]
 name = "weir-kinds"
 version = "0.0.0"
 dependencies = [
@@ -1369,6 +1379,7 @@ dependencies = [
  "tempfile",
  "toml",
  "weir-capture",
+ "weir-engine",
 ]
 
 [[package]]
@@ -1382,17 +1393,32 @@ dependencies = [
  "toml",
  "weir-capture",
  "weir-delivery",
+ "weir-engine",
+ "weir-kinds",
+]
+
+[[package]]
+name = "weir-policy"
+version = "0.0.0"
+dependencies = [
+ "jiff",
+ "serde",
+ "serde_json",
+ "toml",
+ "weir-cadence",
 ]
 
 [[package]]
 name = "weir-signals"
 version = "0.0.0"
 dependencies = [
+ "jiff",
  "serde",
  "tempfile",
  "time",
  "toml",
  "weir-capture",
+ "weir-policy",
 ]
 
 [[package]]

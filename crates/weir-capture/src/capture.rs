@@ -9,6 +9,7 @@ use time::OffsetDateTime;
 
 use crate::key::Key;
 use crate::rec::{self, RecError, Record};
+use crate::Facts;
 
 /// The format and major every capture's record names (40).
 pub const FORMAT: &str = "weir-capture/1";
@@ -67,6 +68,9 @@ pub struct Capture {
     pub taken_at: String,
     /// That it has no own signal and no reading (19).
     pub unread: bool,
+    /// The facts its offer stated, written last as one `fact` field per
+    /// value; never a joined fact (16, 121; C.2, C.9; core.57).
+    pub facts: Facts,
 }
 
 impl Capture {
@@ -85,6 +89,7 @@ impl Capture {
         record.push("machine", self.machine.as_str());
         record.push("taken_at", self.taken_at.as_str());
         record.push("unread", if self.unread { "yes" } else { "no" });
+        record.push_list("fact", &self.facts.to_fields());
         record
     }
 
@@ -115,6 +120,8 @@ impl Capture {
                 format!("is `{came_in_text}`, not run:<adapter>, intake or import:<body>"),
             )
         })?;
+        let facts = Facts::from_fields(record.get_all("fact"))
+            .map_err(|error| RecError::field(error.field, error.reason))?;
         let unread = match record.required("unread")? {
             "yes" => true,
             "no" => false,
@@ -136,6 +143,7 @@ impl Capture {
             machine: record.required("machine")?.to_string(),
             taken_at: time(record, "taken_at")?,
             unread,
+            facts,
         })
     }
 
@@ -175,6 +183,7 @@ mod tests {
             machine: "deneb".into(),
             taken_at: "2026-10-17T04:30:05Z".into(),
             unread: false,
+            facts: Facts::new(),
         }
     }
 
@@ -217,6 +226,50 @@ mod tests {
             "mise 2026.10.10\nthe shim fixed"
         );
         assert_eq!(Capture::from_rec(&written), Ok(capture));
+    }
+
+    #[test]
+    fn stated_facts_read_back() {
+        let facts = Facts::stated(&serde_json::json!({
+            "length": 900,
+            "attendee": ["dana@acme.com", "kim@globex.com"],
+            "recorded": true,
+            "released": "2026-11-14",
+        }))
+        .unwrap();
+        let capture = Capture {
+            facts,
+            ..from_a_run()
+        };
+        let written = capture.to_rec();
+        assert!(
+            written.ends_with(
+                "unread: no\n\
+                 fact: attendee \"dana@acme.com\"\n\
+                 fact: attendee \"kim@globex.com\"\n\
+                 fact: length 900\n\
+                 fact: recorded true\n\
+                 fact: released \"2026-11-14\"\n"
+            ),
+            "{written}"
+        );
+        recfix(&written);
+        assert_eq!(Capture::from_rec(&written), Ok(capture));
+    }
+
+    #[test]
+    fn a_fact_field_out_of_shape_refuses_the_record() {
+        let written = from_a_run().to_rec();
+        for field in [
+            "fact: level patch\n",
+            "fact: says \"request\"\n",
+            "fact: attendee.client true\n",
+            "fact: level\n",
+        ] {
+            let changed = format!("{written}{field}");
+            let error = Capture::from_rec(&changed).unwrap_err();
+            assert_eq!(error.field.as_deref(), Some("fact"), "{changed}");
+        }
     }
 
     #[test]
