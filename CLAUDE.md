@@ -55,12 +55,14 @@ Every tool runs through the shell, one command at a time:
 
 | layer | what | how long |
 |---|---|---|
-| `check-fast` | format (treefmt), the README's prose (Vale), a new place's first commit through the hooks, OpenSpec's Claude Code files, and the specs, through `openspec validate --strict` | seconds |
+| `check-fast` | format (treefmt), a new place's first commit through the hooks, the Rust toolchain's pin, the specs, through `openspec validate --strict`, and each open change as it would archive, with the check's cases (core.59) | seconds |
 
 `devenv shell -- check-fast` runs them (`moon run :#check-fast`);
-`devenv shell -- moon run root:format`, `prose`, `hooks`,
-`openspec-claude` and `specs` run one each. Each crate brings its cargo tests and
-lint as a moon project of its own when it lands.
+`devenv shell -- moon run root:format`, `hooks`, `toolchain`, `specs`,
+`changes` and `changes-cases` run one each. Each crate brings its cargo
+tests and lint as a moon project of its own. No task reads a Markdown
+file of the tree's own but OpenSpec's validation of the specs and of
+each open change as it would archive (core.39, core.59).
 
 ## Claude Code
 
@@ -73,8 +75,8 @@ ignores both (boomdrivedev/boomdrive's record 0022; record 0007): a Claude
 Code setting of the repository's goes into devenv's options, never into
 those files. OpenSpec's skills and commands under `.claude/` are tracked
 as the OpenSpec `devenv.nix` pins writes them; when the pin moves,
-`devenv shell -- sh check-openspec-claude.sh --write` writes them again,
-and `root:openspec-claude` fails until it has.
+`devenv shell -- sh write-openspec-claude.sh` writes them again (record
+0007).
 
 ## Commits
 

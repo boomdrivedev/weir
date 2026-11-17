@@ -1,0 +1,34 @@
+# A stage declares whether it hibernates, a bool returned as written: a
+# conversation that waits and hibernates, a stage of commits that does
+# not, and a conversation that leaves it out, returned left out, its
+# meaning the reader's (53 and C.4 as amended at blueprints 30dce35; 58).
+satisfies = [53, 58]
+declaration = """
+[kinds.talk]
+
+[[kinds.talk.stages]]
+name = "draft"
+prompt = "prompts/talk-draft.md"
+conversation = true
+wait = true
+hibernate = true
+
+[[kinds.talk.stages]]
+name = "code"
+prompt = "prompts/talk-code.md"
+deliverables = ["commits"]
+hibernate = false
+
+[[kinds.talk.stages]]
+name = "review"
+prompt = "prompts/talk-review.md"
+conversation = true
+"""
+
+[expect.kinds.talk]
+version = 1
+stages = [
+  { name = "draft", end = "conversation", hibernate = true },
+  { name = "code", end = "commits", hibernate = false },
+  { name = "review", end = "conversation" },
+]

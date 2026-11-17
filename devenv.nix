@@ -56,47 +56,13 @@ let
     eval "$(${proto}/bin/proto activate bash --export --no-bin --config-mode upwards 2>/dev/null)"
   '';
 
-  # Vale checks the README's prose (.vale.ini, styles/Weir). From its own
-  # release: nixpkgs trails it. Bump the version and the four hashes from
-  # the release's checksums file.
-  valeVersion = "3.24.0";
-  valeAssets = {
-    aarch64-darwin = {
-      os = "macOS_arm64";
-      sha256 = "87b513f26499f6657c15cf7175ba5b058a7c1ff2bb2d4e07265db2dd43451e44";
-    };
-    x86_64-darwin = {
-      os = "macOS_64-bit";
-      sha256 = "eeb39e86f1daac27cc2a77fef3af1824d50559bdc22329fb25fb921c80c79472";
-    };
-    aarch64-linux = {
-      os = "Linux_arm64";
-      sha256 = "104cbd349279e50c4cb40adb70adf345d93cc4a3a0191f9e68bdccb97086b582";
-    };
-    x86_64-linux = {
-      os = "Linux_64-bit";
-      sha256 = "867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214";
-    };
-  };
-  valeAsset = valeAssets.${pkgs.stdenv.hostPlatform.system};
-  vale = pkgs.stdenvNoCC.mkDerivation {
-    pname = "vale";
-    version = valeVersion;
-    src = pkgs.fetchurl {
-      url = "https://github.com/errata-ai/vale/releases/download/v${valeVersion}/vale_${valeVersion}_${valeAsset.os}.tar.gz";
-      inherit (valeAsset) sha256;
-    };
-    sourceRoot = ".";
-    installPhase = "install -Dm755 vale $out/bin/vale";
-  };
-
   # OpenSpec, which writes and validates the changes and specs, and writes
   # the Claude Code skills and commands the tree tracks: the release flume,
   # boomdrive and sluice pin, built as nixpkgs builds its older one. Bump
   # the version, then each hash from the mismatch the build reports, then
   # write the skills and commands under .claude/ again with it, `sh
-  # check-openspec-claude.sh --write` in the shell, since root:openspec-claude
-  # holds them to this release (record 0005).
+  # write-openspec-claude.sh` in the shell; no task holds them to this
+  # release (record 0007 as amended 2026-11-15; core.39).
   openspecVersion = "1.14.3";
   openspec = pkgs.openspec.overrideAttrs (
     finalAttrs: _: {
@@ -140,7 +106,6 @@ in
     pkgs.git
     pkgs.jq
     proto
-    vale
     openspec
     # GNU recutils: the crates' tests hold every record they write to
     # `recfix`, as a write is held before it lands (core.24).
@@ -239,14 +204,6 @@ in
     programs.rustfmt.package = rustfmt;
   };
 
-  scripts.prose = {
-    description = "The README's prose, checked by Vale (.vale.ini)";
-    exec = ''
-      set -euo pipefail
-      cd "$(git rev-parse --show-toplevel)"
-      vale README.md "$@"
-    '';
-  };
   scripts.check-fast = {
     description = "Every check-fast task: moon run :#check-fast";
     exec = ''
