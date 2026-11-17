@@ -21,6 +21,7 @@ projects:
   engine: 'crates/weir-engine'
   kinds: 'crates/weir-kinds'
   pack: 'crates/weir-pack'
+  policy: 'crates/weir-policy'
   signals: 'crates/weir-signals'
   weir: 'crates/weir'
   root: '.'

@@ -18,7 +18,7 @@ fn id(text: &str) -> SignalId {
 fn a_signal(signal: &str) -> Signal {
     Signal {
         signal: id(signal),
-        kind: Nature::Ask,
+        kind: Some(Nature::Ask),
         asserted_by: "jdx/mise".into(),
         assertion: "mise 2026.10.10 is released; the repository pins 2026.9.18.".into(),
         subjects: vec!["release".into(), "mise".into()],
@@ -84,24 +84,32 @@ fn empty_lists() {
 #[test]
 fn a_signal_lacking_a_field_is_refused_naming_it() {
     let record = a_signal("release/x#1").to_record();
-    for field in [
-        "format",
-        "signal",
-        "kind",
-        "asserted_by",
-        "assertion",
-        "excerpt",
-        "position",
-    ] {
+    let lacking = |field: &str| {
         let mut lacking = Record::new();
         for (name, value) in record.fields() {
             if name != field {
                 lacking.push(name, value.as_str());
             }
         }
-        let error = Signal::from_record(&lacking).unwrap_err();
+        lacking
+    };
+    for field in [
+        "format",
+        "signal",
+        "asserted_by",
+        "assertion",
+        "excerpt",
+        "position",
+    ] {
+        let error = Signal::from_record(&lacking(field)).unwrap_err();
         assert_eq!(error.field.as_deref(), Some(field), "{error}");
     }
+    // A record with no `kind` reads as a signal of no nature, which the
+    // inbox's read takes of a rule's own signal alone (127).
+    assert_eq!(
+        Signal::from_record(&lacking("kind")).map(|signal| signal.kind),
+        Ok(None)
+    );
     let mut twice = record.clone();
     twice.push("position", "again");
     assert_eq!(
@@ -149,6 +157,7 @@ fn a_signal_with_a_field_left_empty_is_refused_naming_it() {
             .take(&Taken {
                 capture: capture("release/a"),
                 own_signal: None,
+                rule_move: None,
             })
             .unwrap(),
     );
@@ -183,7 +192,7 @@ fn a_signal_of_an_unknown_nature() {
 fn every_nature_reads_back() {
     for kind in Nature::ALL {
         let signal = Signal {
-            kind,
+            kind: Some(kind),
             ..a_signal("release/x#1")
         };
         let written = signals_rec(std::slice::from_ref(&signal));
@@ -233,6 +242,7 @@ fn taken_with_own(key: &str, cut: Option<LeftOut>) -> Taken {
             ..capture(key)
         },
         own_signal: Some(own_signal(key, cut)),
+        rule_move: None,
     }
 }
 
@@ -279,6 +289,7 @@ fn an_unread_capture() {
     let taken = Taken {
         capture: capture("release/a"),
         own_signal: None,
+        rule_move: None,
     };
     let inbox = empty();
     let write = inbox.take(&taken).unwrap();
@@ -304,6 +315,7 @@ fn a_held_key() {
         .take(&Taken {
             capture: capture("release/a"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0.len(), 1);
@@ -326,6 +338,7 @@ fn a_taken_capture_agrees_with_its_own_signal() {
                 ..capture("release/a")
             },
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0[0].field.as_deref(), Some("unread"));
@@ -344,6 +357,7 @@ fn a_taken_capture_agrees_with_its_own_signal() {
                 ..capture("release/a")
             },
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert_eq!(refused.0[0].field.as_deref(), Some("came_in"));
@@ -381,6 +395,7 @@ fn with_meeting() -> InboxAt {
         .take(&Taken {
             capture: capture("meeting/file/ab12"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap();
     after(&inbox, &write)
@@ -609,6 +624,149 @@ fn verbatim_across_lines() {
         inbox.signal(&id("meeting/file/ab12#1")).unwrap().excerpt,
         two_lines
     );
+}
+
+/// A rule's own signal of the capture `key`, titled `title`: no nature,
+/// its excerpt and assertion the title, asserted by its source, at
+/// `title` (127).
+fn rules_signal(key: &str, title: &str, source: &str) -> Signal {
+    Signal {
+        signal: id(&format!("{key}#1")),
+        kind: None,
+        asserted_by: source.into(),
+        assertion: title.into(),
+        subjects: vec![],
+        argues_with: vec![],
+        excerpt: title.into(),
+        position: "title".into(),
+        cut: None,
+    }
+}
+
+#[test]
+fn an_own_signal_a_rule_made_has_no_nature() {
+    let stand_up = weir_capture::Capture {
+        title: Some("Daily stand-up".into()),
+        source: "meeting".into(),
+        unread: false,
+        ..capture("meeting/file/standup")
+    }
+    .to_rec();
+    let signal = rules_signal("meeting/file/standup", "Daily stand-up", "meeting");
+    let written = signals_rec(std::slice::from_ref(&signal));
+    assert!(!written.contains("kind:"), "{written}");
+    recfix(&written);
+    let files = |signals: &str| {
+        vec![
+            (
+                "inbox/captures/meeting/file/standup/capture.rec",
+                stand_up.clone(),
+            ),
+            (
+                "inbox/captures/meeting/file/standup/signals.rec",
+                signals.to_string(),
+            ),
+        ]
+    };
+    let inbox = InboxAt::read(files(&written)).unwrap();
+    let read = inbox.signal(&id("meeting/file/standup#1")).unwrap();
+    assert_eq!(read.kind, None);
+    assert_eq!(read, &signal);
+
+    // One that differs from a rule's own signal is refused naming the
+    // field that differs.
+    for (changed, field) in [
+        (
+            Signal {
+                excerpt: "Weekly stand-up".into(),
+                ..signal.clone()
+            },
+            "excerpt",
+        ),
+        (
+            Signal {
+                asserted_by: "calendar".into(),
+                ..signal.clone()
+            },
+            "asserted_by",
+        ),
+        (
+            Signal {
+                position: "line 1".into(),
+                ..signal.clone()
+            },
+            "position",
+        ),
+        (
+            Signal {
+                subjects: vec!["stand-up".into()],
+                ..signal.clone()
+            },
+            "subjects",
+        ),
+    ] {
+        let error = InboxAt::read(files(&signals_rec(&[changed]))).unwrap_err();
+        assert_eq!(
+            error.path,
+            "inbox/captures/meeting/file/standup/signals.rec"
+        );
+        assert_eq!(error.field.as_deref(), Some(field), "{error}");
+    }
+    // A capture with no title is its own signal by its key.
+    let untitled = weir_capture::Capture {
+        title: None,
+        source: "deploy".into(),
+        unread: false,
+        ..capture("deploy/web/42")
+    }
+    .to_rec();
+    let by_key = signals_rec(&[rules_signal("deploy/web/42", "deploy/web/42", "deploy")]);
+    InboxAt::read([
+        (
+            "inbox/captures/deploy/web/42/capture.rec",
+            untitled.as_str(),
+        ),
+        ("inbox/captures/deploy/web/42/signals.rec", by_key.as_str()),
+    ])
+    .unwrap();
+}
+
+#[test]
+fn a_signal_of_no_nature_that_no_rule_made() {
+    let unread = capture("release/a").to_rec();
+    let reading = signals_rec(&[Signal {
+        kind: None,
+        ..a_signal("release/a#1")
+    }]);
+    recfix(&reading);
+    let error = InboxAt::read([
+        ("inbox/captures/release/a/capture.rec", unread.as_str()),
+        ("inbox/captures/release/a/signals.rec", reading.as_str()),
+    ])
+    .unwrap_err();
+    assert_eq!(error.path, "inbox/captures/release/a/signals.rec");
+    assert_eq!(error.record, Some(1));
+    assert_eq!(error.field.as_deref(), Some("kind"));
+    // Nor is the second signal of a capture's reading a rule's.
+    let read = weir_capture::Capture {
+        unread: false,
+        ..capture("release/a")
+    }
+    .to_rec();
+    let two = signals_rec(&[
+        a_signal("release/a#1"),
+        Signal {
+            kind: None,
+            ..a_signal("release/a#2")
+        },
+    ]);
+    let error = InboxAt::read([
+        ("inbox/captures/release/a/capture.rec", read.as_str()),
+        ("inbox/captures/release/a/signals.rec", two.as_str()),
+    ])
+    .unwrap_err();
+    assert_eq!(error.record, Some(2));
+    assert_eq!(error.field.as_deref(), Some("kind"));
 }
 
 #[test]

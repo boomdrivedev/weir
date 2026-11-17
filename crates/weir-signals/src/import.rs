@@ -13,7 +13,7 @@
 use time::format_description::well_known::Rfc3339;
 use time::{OffsetDateTime, UtcOffset};
 use weir_capture::rec::{self, Record};
-use weir_capture::{CameIn, Capture, ImportLine, Key};
+use weir_capture::{CameIn, Capture, Facts, ImportLine, Key};
 
 use crate::inbox::{Checked, Effect, Held, InboxAt, ItemAt};
 use crate::layout::Place;
@@ -231,6 +231,9 @@ impl InboxAt {
                 machine: machine.to_string(),
                 taken_at: imported_at.clone(),
                 unread: signals.is_empty(),
+                // An import states no fact: no rule reads an imported
+                // capture (126; core.60).
+                facts: Facts::new(),
             };
             write.put(Place::Capture(key.clone()).path(), capture.to_rec());
             if !signals.is_empty() {

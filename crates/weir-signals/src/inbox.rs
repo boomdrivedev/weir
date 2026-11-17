@@ -239,7 +239,9 @@ impl InboxAt {
                             "lies beside no `capture.rec`: a capture's signals lie beside the capture",
                         ));
                     };
-                    held.signals = Some(read_signals(path, text, key)?);
+                    let signals = read_signals(path, text, key)?;
+                    no_nature(path, &held.capture, &signals)?;
+                    held.signals = Some(signals);
                 }
                 Place::Moves => moves = Some(path),
                 Place::Batch(name) => {
@@ -605,6 +607,21 @@ impl InboxAt {
         Some(weight)
     }
 
+    /// The rule's current item: the item naming the rule `rule` with no
+    /// `closed_at`, or, where a write formed elsewhere left several, the
+    /// earliest by `named_at`, then by name (128; record 0011).
+    pub fn rule_item(&self, rule: &str) -> Option<&ItemAt> {
+        let named_at = |at: &ItemAt| OffsetDateTime::parse(&at.item.named_at, &Rfc3339).ok();
+        self.items
+            .values()
+            .filter(|at| at.item.rule.as_deref() == Some(rule) && at.item.closed_at.is_none())
+            .min_by(|a, b| {
+                named_at(a)
+                    .cmp(&named_at(b))
+                    .then_with(|| a.item.item.cmp(&b.item.item))
+            })
+    }
+
     /// The batch named `name`, as its file holds it.
     pub fn batch(&self, name: &str) -> Option<&Batch> {
         self.batches.get(name)
@@ -703,6 +720,73 @@ fn read_signals(path: &str, text: &str, key: &Key) -> Result<Vec<Signal>, InboxE
         signals.push(signal);
     }
     Ok(signals)
+}
+
+/// Refuses a signal of the `signals.rec` at `path` with no nature, naming
+/// `kind`, unless it is a rule's own signal: `<key>#1`, its capture's one
+/// signal, of a capture not unread and not imported (127). One that is,
+/// but whose excerpt or assertion is not its capture's title, or its key
+/// where it has none, whose asserter is not its capture's source, whose
+/// position is not `title`, or that holds subjects, an argument or a cut,
+/// is refused naming the field that differs (26, 127; core.16).
+fn no_nature(path: &str, capture: &Capture, signals: &[Signal]) -> Result<(), InboxError> {
+    for (n, signal) in (1..).zip(signals) {
+        if signal.kind.is_some() {
+            continue;
+        }
+        let refuse = |field: &str, reason: String| {
+            InboxError::field(path, Some(n), RecError::field(field, reason))
+        };
+        let a_rules = signals.len() == 1
+            && signal.signal.n == 1
+            && !capture.unread
+            && !matches!(capture.came_in, CameIn::Import(_));
+        if !a_rules {
+            return Err(refuse(
+                "kind",
+                "is missing, and only a rule's own signal, its capture's one, has no nature \
+                 (25, 127)"
+                    .to_string(),
+            ));
+        }
+        let text = capture
+            .title
+            .clone()
+            .unwrap_or_else(|| capture.key.to_string());
+        for (field, holds, should) in [
+            ("excerpt", signal.excerpt == text, format!("`{text}`")),
+            ("assertion", signal.assertion == text, format!("`{text}`")),
+            (
+                "asserted_by",
+                signal.asserted_by == capture.source,
+                format!("`{}`", capture.source),
+            ),
+            (
+                "position",
+                signal.position == "title",
+                "`title`".to_string(),
+            ),
+            ("subjects", signal.subjects.is_empty(), "none".to_string()),
+            (
+                "argues_with",
+                signal.argues_with.is_empty(),
+                "none".to_string(),
+            ),
+            ("cut", signal.cut.is_none(), "none".to_string()),
+        ] {
+            if !holds {
+                return Err(refuse(
+                    field,
+                    format!(
+                        "differs from a rule's own signal, which has no nature and gives \
+                         {should} here: its capture's title, or its key, asserted by its \
+                         source (127)"
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// The one `weir-item/1` record of the `item.rec` at `path`, which names

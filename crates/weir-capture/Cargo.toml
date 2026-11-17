@@ -6,6 +6,8 @@ license.workspace = true
 description = "The capture contract: an adapter's lines and declaration, and the seven steps a host takes them in (statement 1 to 24, 72 to 77)."
 
 [dependencies]
+weir-policy = { path = "../weir-policy" }
+jiff.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true

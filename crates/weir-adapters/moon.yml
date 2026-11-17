@@ -2,6 +2,8 @@ $schema: 'https://moonrepo.dev/schemas/project.json'
 
 # weir-adapters: the folder drop, the meeting file and the signals-folder
 # import. One task per check, each run from the workspace root (core.39).
+# It builds on weir-capture, and weir-capture on weir-policy and
+# weir-cadence, so the three crates are among each task's inputs.
 # The tests run the pack's cases of the two adapters, read through
 # weir-pack, so its crate and the adapter cases are inputs too.
 language: 'rust'
@@ -9,21 +11,21 @@ language: 'rust'
 tasks:
   format:
     command: 'cargo fmt -p weir-adapters --check'
-    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   lint:
     command: 'cargo clippy -p weir-adapters --all-targets -- -D warnings'
-    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   typecheck:
     command: 'cargo check -p weir-adapters --all-targets'
-    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   test:
     command: 'cargo test -p weir-adapters'
-    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: ['/crates/weir-adapters/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/crates/weir-pack/**/*', '/pack/adapter/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}

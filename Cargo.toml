@@ -21,6 +21,9 @@
 #                          snapshot, giving the transitions that fire,
 #                          their effects and the next state
 #   crates/weir-cadence    five-field cron, caught up once: landed
+#   crates/weir-policy     the facts a signal carries, the people list
+#                          they are joined from, and the keeper's policy,
+#                          read and checked once for every host
 #   crates/weir-delivery   a delivery's four records in recutils and JSON,
 #                          and record, hand, confirm and owed over a
 #                          deliverer's records: landed
@@ -42,6 +45,7 @@ members = [
   "crates/weir-pack",
   "crates/weir-delivery",
   "crates/weir-bounded",
+  "crates/weir-policy",
   "crates/weir-engine",
 ]
 

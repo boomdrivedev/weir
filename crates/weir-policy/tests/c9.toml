@@ -1,0 +1,50 @@
+# The settings document of C.9's example, as written at blueprints 30dce35,
+# laid out by taplo, which owns every TOML file of the tree (core.39), with
+# one table of a host's own after it.
+[about] # what a reader's `about` picks from (120)
+teams = ["web", "platform"]
+repositories = ["acme/web-app", "acme/infra"]
+
+[[person]] # (119)
+name = "Dana Reyes"
+addresses = ["dana@acme.com"]
+names = ["Dana", "Dana Reyes"] # the names a transcript may give her
+role = "executive"
+teams = ["web"]
+
+[[org]]
+name = "Globex"
+domains = ["globex.com"]
+client = true
+
+[[rules]] # in order; the first whose match holds gives the move (125)
+name = "stand-ups"
+when = { all = [
+  { fact = "source", is = "meeting" },
+  { fact = "title", contains = "stand-up" },
+] }
+drop = "a stand-up" # a drop and its reason (122)
+
+[[rules]]
+name = "point-releases"
+when = { fact = "level", in = ["patch", "minor"] }
+kind = "update"                                    # the kind it launches, named as a launch names it
+repository = "~/Code/acme/web-app"                 # where it launches, as a launch names it
+priority = "low"                                   # low, normal, elevated, high or urgent
+window = "*/30 * * * *"                            # five-field cron (C.5); none when omitted, due at once (129)
+
+[[rules]]
+name = "a-clients-ask"
+when = { all = [
+  { fact = "says", is = "request" },
+  { fact = "attendee.client", is = true },
+  { any = [
+    { fact = "speaker.role", is = "executive" },
+    { fact = "speaker.client", is = true },
+  ] },
+] }
+person = "a client's ask" # a person's turn, and what it waits on them for
+priority = "urgent"
+
+[host] # a table of the host's own, which weir-policy leaves alone
+branch = "inbox"

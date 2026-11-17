@@ -206,6 +206,7 @@ fn an_offer_under_an_imported_key() {
         .take(&Taken {
             capture: common::capture("release/mise/2026.10.10"),
             own_signal: None,
+            rule_move: None,
         })
         .unwrap_err();
     assert!(refused.0[0].why.contains("is held"), "{refused}");

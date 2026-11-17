@@ -48,8 +48,10 @@ impl Schedule {
     }
 
     /// The first time the schedule names strictly after `instant`, read in
-    /// `zone`, or none when it names no later time.
-    pub(crate) fn first_after(&self, instant: Timestamp, zone: &TimeZone) -> Option<Zoned> {
+    /// `zone`, or none when it names no later time. A rule's item is named
+    /// for the first time its window names after the item's making (129;
+    /// C.9).
+    pub fn first_after(&self, instant: Timestamp, zone: &TimeZone) -> Option<Zoned> {
         // Searched from the instant's whole second, that second included, so
         // a fraction past a named time never decides whether it was passed.
         let start = Timestamp::from_second(instant.as_second())

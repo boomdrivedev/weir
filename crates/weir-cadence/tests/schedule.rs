@@ -364,3 +364,30 @@ fn a_refused_schedule_is_never_read() {
     let now = instant("2026-11-03T00:00Z").to_zoned(TimeZone::UTC);
     assert!(!is_due(&never, Some(instant("2026-01-01T00:00Z")), &now));
 }
+
+#[test]
+fn the_first_time_after_an_instant() {
+    let read = schedule("*/30 * * * *");
+    let found = read
+        .first_after(instant("2026-11-12T10:05:00Z"), &TimeZone::UTC)
+        .expect("a later time");
+    assert_eq!(found.timestamp(), instant("2026-11-12T10:30:00Z"));
+}
+
+#[test]
+fn an_instant_on_a_named_time() {
+    let read = schedule("*/30 * * * *");
+    let found = read
+        .first_after(instant("2026-11-12T10:30:00Z"), &TimeZone::UTC)
+        .expect("a later time");
+    assert_eq!(found.timestamp(), instant("2026-11-12T11:00:00Z"));
+}
+
+#[test]
+fn a_schedule_that_names_no_later_time() {
+    let read = schedule("0 0 30 2 *");
+    assert_eq!(
+        read.first_after(instant("2026-11-12T10:05:00Z"), &TimeZone::UTC),
+        None
+    );
+}

@@ -65,7 +65,7 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
     // A capture with its cut own signal, and an unread capture.
     let own = OwnSignal {
         signal: "release/mise/2026.10.10#1".into(),
-        kind: Nature::Ask,
+        kind: Some(Nature::Ask),
         asserted_by: "jdx/mise".into(),
         assertion: "mise 2026.10.10 is released".into(),
         subjects: vec!["release".into()],
@@ -84,16 +84,19 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
             ..capture("release/mise/2026.10.10")
         },
         own_signal: Some(own.clone()),
+        rule_move: None,
     };
     inbox = formed(&inbox, inbox.take(&release).unwrap());
     let meeting = Taken {
         capture: capture("meeting/file/ab12"),
         own_signal: None,
+        rule_move: None,
     };
     inbox = formed(&inbox, inbox.take(&meeting).unwrap());
     let empty_reading = Taken {
         capture: capture("folder/notes/cd34"),
         own_signal: None,
+        rule_move: None,
     };
     inbox = formed(&inbox, inbox.take(&empty_reading).unwrap());
 
@@ -289,6 +292,9 @@ fn every_record_written_by_its_operation_reads_back_as_written() {
             made_by: MadeBy::Join,
             named_by: "curation".into(),
             named_at: AT.into(),
+            rule: None,
+            priority: None,
+            closed_at: None,
         }
     );
     let pin = read.item("pin-mise").unwrap();

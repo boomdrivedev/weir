@@ -1,15 +1,16 @@
 $schema: 'https://moonrepo.dev/schemas/project.json'
 
 # weir-delivery: a delivery's records and the calls over them (100 to 113;
-# C.8). One task per check (core.39), each declaring everything it reads
-# (kit:testing.3).
+# C.8). One task per check (core.39), each declaring everything it reads:
+# weir-capture, which it builds on, and weir-policy and weir-cadence,
+# which weir-capture builds on, among them (kit:testing.3).
 language: 'rust'
 dependsOn: [capture]
 
 tasks:
   format:
     command: 'cargo fmt -p weir-delivery --check'
-    inputs: &inputs ['/crates/weir-delivery/**/*', '/crates/weir-capture/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
+    inputs: &inputs ['/crates/weir-delivery/**/*', '/crates/weir-capture/**/*', '/crates/weir-policy/**/*', '/crates/weir-cadence/**/*', '/Cargo.toml', '/Cargo.lock', '/devenv.nix', '/devenv.lock', '/.prototools']
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   lint:

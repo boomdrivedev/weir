@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use weir_capture::{Completion, Failure, Key, Line, Offer};
+use weir_capture::{Completion, Facts, Failure, Key, Line, Offer};
 
 use crate::copy::copy;
 use crate::event_time::event_at;
@@ -135,6 +135,8 @@ pub(crate) fn offer_with(
         url: None,
         raw: vec![raw],
         excerpt: None,
+        // The built-in adapters state no fact (61, 62).
+        facts: Facts::new(),
     }))
 }
 
