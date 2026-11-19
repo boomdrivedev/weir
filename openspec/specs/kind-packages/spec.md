@@ -178,13 +178,21 @@ named (89 and C.4 as amended at blueprints 8eec6dd; 90; record 0005).
 - **WHEN** a folder holds only `kind.toml`, declaring `train` with `lands = true`, `stages = []`, `landing_fix = "acme/fix@1"` and `max_landing_fixes = 2`, and is read held at `acme/train@1`, and the same file is given as a path and its bytes
 - **THEN** both give `train` landing with no stages, its `landing_fix` spelling `acme/fix@1` and its `max_landing_fixes` 2, the identity `acme/train@1`, and one content hash, the hash of that one file
 
-### Requirement: A package of a statechart kind is refused naming its kind
+### Requirement: A package of a statechart kind gives its kind
 
-`read-package` SHALL count a statechart kind its `kind.toml` declares among the package's kinds, so a `kind.toml` declaring a simple kind and a statechart kind declares two and is refused as any such package is (89). A package whose one kind is a statechart kind SHALL be refused naming `kinds.<kind>`, its reason saying it is a statechart kind and that `read-package` reads a package of a simple kind alone (92; design 12).
+`read-package` SHALL count a statechart kind its `kind.toml` declares among the package's kinds, so a `kind.toml` declaring a simple kind and a statechart kind declares two and is refused as any such package is (89). A package whose one kind is a statechart kind SHALL give that statechart kind, at the identity it is held at, with its content hash over every regular file the package holds, and SHALL be refused naming `kinds.<kind>`, or `kinds.<kind>.version`, where the identity it is held at is not its declaration's name and version, as a simple kind's package is (89, 90, 92).
 
 #### Scenario: A package of a statechart kind
-- **WHEN** a folder holds only `kind.toml`, declaring the statechart kind `persona` with a title and one region, and is read held at `acme/persona@1`
-- **THEN** the package is refused naming `kinds.persona`, its reason holding `is a statechart kind`
+- **WHEN** a package holds only `kind.toml`, declaring the statechart kind `persona` titled `Persona test` with one region, and is read held at `acme/persona@1`
+- **THEN** it reads, its identity `acme/persona@1`, its kind the statechart kind `persona` at version 1 with the title `Persona test` and no simple kind, and its content hash the hash of that one file
+
+#### Scenario: A package of a statechart kind held at another version
+- **WHEN** the same package is read held at `acme/persona@2`
+- **THEN** it is refused naming `kinds.persona.version`, saying it makes the package `acme/persona@1` but is held at `acme/persona@2`
+
+#### Scenario: A package of a statechart kind held at another name
+- **WHEN** the same package is read held at `acme/review@1`
+- **THEN** it is refused naming `kinds.persona`
 
 #### Scenario: A simple kind and a statechart kind in one package
 - **WHEN** a package's `kind.toml` declares the simple kind `review` and the statechart kind `persona`
