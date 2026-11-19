@@ -1,0 +1,22 @@
+{
+  "schema": "sluice/branch@1",
+  "branch": "bolt/weir-keeps-no-leftover-settings",
+  "log": "sluice/log@1",
+  "base": "ee3b8c818e5a32f1086d94a035fb176e9dc9f1cc",
+  "verified": true,
+  "covered_by": {
+    "at": "ee3b8c818e5a32f1086d94a035fb176e9dc9f1cc",
+    "result": "passed",
+    "ran": 54,
+    "replayed": 0
+  },
+  "window": 3,
+  "next_place": 5,
+  "next_candidate": 3,
+  "candidates": [],
+  "landing": null,
+  "release": [],
+  "outbox": [],
+  "lead": "deneb",
+  "landed": "ee3b8c818e5a32f1086d94a035fb176e9dc9f1cc"
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "sluice/submission@1",
+  "id": 2,
+  "branch": "bolt/weir-keeps-no-leftover-settings",
+  "head": "ebd0e0e5312815f20ef236dfd063f243fe48e7e4",
+  "from": {
+    "agent": "chore/weirs-leftover-kit-file-is-removed",
+    "worktree": "chore/weirs-leftover-kit-file-is-removed",
+    "path": "/Users/chuck/.local/share/flume/places/2274b896deda/chore--weirs-leftover-kit-file-is-removed",
+    "host": "deneb"
+  },
+  "submitted": "2026-11-19T05:17:02Z",
+  "after": [],
+  "priority": 0,
+  "attempt": 2,
+  "state": "landed",
+  "tested": {
+    "combination": "dc57ef25e33df30b08f26c4aedc1d5dfd055b010",
+    "on": "073d2298eb47c7d6917d3131d28571d2f6eda319",
+    "submissions": [
+      2
+    ]
+  },
+  "result": "passed",
+  "landed_as": "ee3b8c818e5a32f1086d94a035fb176e9dc9f1cc"
+}

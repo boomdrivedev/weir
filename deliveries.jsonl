@@ -1,0 +1,4 @@
+{"format": "weir-known/1", "reader": "chore/weirs-leftover-kit-file-is-removed", "known_at": "2026-11-19T05:12:44Z"}
+{"format": "weir-delivery/1", "key": "2:landed", "readers": ["chore/weirs-leftover-kit-file-is-removed"], "message": "[sluice] #2 landed on bolt/weir-keeps-no-leftover-settings as ee3b8c8.", "recorded_at": "2026-11-19T05:23:37Z", "expires_at": "2026-11-26T05:23:37Z"}
+{"format": "weir-handover/1", "key": "2:landed", "reader": "chore/weirs-leftover-kit-file-is-removed", "by": "inbox", "at": "2026-11-19T05:29:49Z"}
+{"format": "weir-confirmation/1", "key": "2:landed", "reader": "chore/weirs-leftover-kit-file-is-removed", "at": "2026-11-19T05:29:54Z"}

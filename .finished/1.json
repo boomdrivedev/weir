@@ -1,0 +1,37 @@
+{
+  "schema": "sluice/submission@1",
+  "id": 1,
+  "branch": "bolt/weir-keeps-no-leftover-settings",
+  "head": "ac53e65cd7e12d93af03e97b02df33627343bdff",
+  "from": {
+    "agent": "chore/weirs-leftover-kit-file-is-removed",
+    "worktree": "chore/weirs-leftover-kit-file-is-removed",
+    "path": "/Users/chuck/.local/share/flume/places/2274b896deda/chore--weirs-leftover-kit-file-is-removed",
+    "host": "deneb"
+  },
+  "submitted": "2026-11-19T04:56:09Z",
+  "after": [],
+  "priority": 0,
+  "attempt": 1,
+  "state": "withdrawn",
+  "tested": {
+    "combination": "4237f546e43d0ae38866e73e6e299cc2071d9d39",
+    "on": "073d2298eb47c7d6917d3131d28571d2f6eda319",
+    "submissions": [
+      1
+    ]
+  },
+  "result": "failed",
+  "failed": [
+    {
+      "task": "root:format",
+      "hash": "443596eb74bf1b43ac34b1007eab99cf850e81dafc03185e1b1591577c1b11dc",
+      "log": "/Users/chuck/.local/share/boomdrive/repositories/boomdrivedev/weir/weir.git/sluice-remote/origin/.logs/bolt/weir-keeps-no-leftover-settings/c1/root:format.log",
+      "unsigned": "root:format: .claude/settings.json is not in the tree"
+    }
+  ],
+  "withdrawn": {
+    "by": "resubmission",
+    "at": "2026-11-19T05:17:02Z"
+  }
+}
