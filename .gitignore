@@ -1,3 +1,8 @@
+# Each entry is negated among root:format's inputs (moon.yml) where git
+# matches it, at any depth where it has no slash but a last one, so moon
+# hashes nothing git ignores: an entry added here is added there (record
+# 0013, core.39).
+
 /target
 .devenv/
 .devenv.flake.nix
@@ -9,6 +14,8 @@ devenv.local.nix
 
 # Claude Code's project files, which devenv writes from devenv.nix at each
 # entry to the shell and at a place's readiness (boomdrivedev/boomdrive's
-# record 0022; record 0007)
+# record 0022; record 0007), and the settings Claude Code writes for a
+# person's own use of a checkout (record 0013)
 /.mcp.json
 /.claude/settings.json
+/.claude/settings.local.json
