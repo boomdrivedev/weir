@@ -180,7 +180,7 @@ named (89 and C.4 as amended at blueprints 8eec6dd; 90; record 0005).
 
 ### Requirement: A package of a statechart kind gives its kind
 
-`read-package` SHALL count a statechart kind its `kind.toml` declares among the package's kinds, so a `kind.toml` declaring a simple kind and a statechart kind declares two and is refused as any such package is (89). A package whose one kind is a statechart kind SHALL give that statechart kind, at the identity it is held at, with its content hash over every regular file the package holds, and SHALL be refused naming `kinds.<kind>`, or `kinds.<kind>.version`, where the identity it is held at is not its declaration's name and version, as a simple kind's package is (89, 90, 92).
+`read-package` SHALL count a statechart kind its `kind.toml` declares among the package's kinds, so a `kind.toml` declaring a simple kind and a statechart kind declares two and is refused (89). A package whose one kind is a statechart kind SHALL give that kind at the identity it is held at with its content hash, and SHALL be refused where it is held at another name or version, as a simple kind's package is (89, 90, 92).
 
 #### Scenario: A package of a statechart kind
 - **WHEN** a package holds only `kind.toml`, declaring the statechart kind `persona` titled `Persona test` with one region, and is read held at `acme/persona@1`
