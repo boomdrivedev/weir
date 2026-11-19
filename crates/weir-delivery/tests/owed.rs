@@ -204,3 +204,31 @@ fn a_call_made_twice() {
     let refused = owed(&records, "now").unwrap_err();
     assert_eq!(refused.field, "now");
 }
+
+#[test]
+fn each_deliverys_hand_overs_in_the_order_added() {
+    let records = [
+        delivery("a", &["planner", "reviewer"], 604800),
+        handover("a", "planner", "notice", "2026-11-08T10:02:01-05:00"),
+        delivery("b", &["planner"], 604800),
+        handover("b", "planner", "notice", "2026-11-08T10:02:02-05:00"),
+        handover("a", "reviewer", "notice", "2026-11-08T10:02:03-05:00"),
+        handover("a", "planner", "wake", "2026-11-08T10:02:04-05:00"),
+        handover("b", "planner", "wake", "2026-11-08T10:02:05-05:00"),
+    ];
+    let owed = owed(&records, "2026-11-08T12:00:00-05:00").unwrap();
+    let handed = |reader: usize, delivery: usize| -> Vec<(&str, &str)> {
+        owed.readers[reader].deliveries[delivery]
+            .handovers
+            .iter()
+            .map(|handover| (handover.key.as_str(), handover.by.as_str()))
+            .collect()
+    };
+    assert_eq!(
+        keys(&owed),
+        [("planner", vec!["a", "b"]), ("reviewer", vec!["a"])]
+    );
+    assert_eq!(handed(0, 0), [("a", "notice"), ("a", "wake")]);
+    assert_eq!(handed(0, 1), [("b", "notice"), ("b", "wake")]);
+    assert_eq!(handed(1, 0), [("a", "notice")]);
+}
