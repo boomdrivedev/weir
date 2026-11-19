@@ -65,9 +65,16 @@ fn at<'a>(problems: &'a [Problem], field: &str) -> &'a Problem {
 fn a_package_that_reads() {
     let package = read(REVIEW, &[PROMPT], "acme/review@1").unwrap();
     assert_eq!(package.identity, identity("acme/review@1"));
-    assert_eq!(package.kind.name, "review");
-    assert_eq!(package.kind.version, 1);
-    let stages: Vec<_> = package.kind.stages.iter().map(|s| &s.prompt).collect();
+    assert_eq!(package.kind.simple().expect("a simple kind").name, "review");
+    assert_eq!(package.kind.simple().expect("a simple kind").version, 1);
+    let stages: Vec<_> = package
+        .kind
+        .simple()
+        .expect("a simple kind")
+        .stages
+        .iter()
+        .map(|s| &s.prompt)
+        .collect();
     assert_eq!(stages, ["prompts/review.md"]);
     assert_eq!(
         package.hash,
@@ -122,7 +129,7 @@ fn bytes_and_paths_need_not_be_text_but_kind_toml() {
         (b"art/\xffpicture.png", b"\x89PNG\xff"),
     ];
     let package = read_package(files, &identity("acme/review@1")).unwrap();
-    assert_eq!(package.kind.name, "review");
+    assert_eq!(package.kind.simple().expect("a simple kind").name, "review");
 }
 
 // A path given is a file's path within the package.
@@ -233,21 +240,35 @@ regions.main.initial = "done"
 regions.main.states.done.final = true
 "#;
 
-// A package of a statechart kind is refused naming its kind.
+// A package of a statechart kind gives its statechart kind, at the
+// identity it is held at, with its content hash (89, 92).
 
 #[test]
 fn a_package_of_a_statechart_kind() {
-    let problems = refused(read(PERSONA, &[], "acme/persona@1"));
-    assert_eq!(fields(&problems), ["kinds.persona"]);
-    assert!(
-        problems[0].reason.contains("is a statechart kind"),
-        "{}",
-        problems[0]
-    );
+    let package = read(PERSONA, &[], "acme/persona@1").expect("persona's package reads");
+    assert_eq!(package.identity, identity("acme/persona@1"));
+    assert_eq!(package.kind.name(), "persona");
+    assert_eq!(package.kind.version(), 1);
+    assert!(package.kind.simple().is_none());
+    let kind = package.kind.statechart().expect("a statechart kind");
+    assert_eq!(kind.title, "Persona test");
+    assert_eq!(package.hash, ContentHash::of([("kind.toml", PERSONA)]));
+}
+
+#[test]
+fn a_package_of_a_statechart_kind_held_at_another_version() {
+    let problems = refused(read(PERSONA, &[], "acme/persona@2"));
+    assert_eq!(fields(&problems), ["kinds.persona.version"]);
     assert_eq!(
         problems[0].reason,
-        "is a statechart kind, and read-package reads a package of a simple kind alone"
+        "makes the package `acme/persona@1`, but it is held at `acme/persona@2`, and a package is held at its declaration's name and version"
     );
+}
+
+#[test]
+fn a_package_of_a_statechart_kind_held_at_another_name() {
+    let problems = refused(read(PERSONA, &[], "acme/review@1"));
+    assert_eq!(fields(&problems), ["kinds.persona"]);
 }
 
 #[test]
@@ -314,7 +335,10 @@ fn the_same_package_with_its_prompt_moved_inside_it_reads_s17() {
         "acme/review@1",
     )
     .unwrap();
-    assert_eq!(package.kind.stages[0].prompt, "prompts/code.md");
+    assert_eq!(
+        package.kind.simple().expect("a simple kind").stages[0].prompt,
+        "prompts/code.md"
+    );
 }
 
 #[test]
@@ -384,9 +408,15 @@ fn a_path_with_a_dot_segment() {
         let kind_toml = review_naming(prompt, Some("./prompts/review.md"));
         let package = read(&kind_toml, &[PROMPT], "acme/review@1")
             .unwrap_or_else(|e| panic!("{prompt}: {e}"));
-        assert_eq!(package.kind.stages[0].prompt, prompt, "returned as written");
         assert_eq!(
-            package.kind.stages[0].standing.as_deref(),
+            package.kind.simple().expect("a simple kind").stages[0].prompt,
+            prompt,
+            "returned as written"
+        );
+        assert_eq!(
+            package.kind.simple().expect("a simple kind").stages[0]
+                .standing
+                .as_deref(),
             Some("./prompts/review.md")
         );
     }
@@ -417,7 +447,10 @@ fn a_markdown_link_between_parts() {
         "Hold it to [the checklist](../checklist.md).\n",
     );
     let package = read(REVIEW, &[prompt], "acme/review@1").unwrap();
-    assert_eq!(package.kind.stages[0].prompt, "prompts/review.md");
+    assert_eq!(
+        package.kind.simple().expect("a simple kind").stages[0].prompt,
+        "prompts/review.md"
+    );
 }
 
 // A package held at another identity is refused naming both.

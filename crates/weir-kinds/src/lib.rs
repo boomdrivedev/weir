@@ -93,7 +93,7 @@ pub use identity::{Identity, NamedKind, LAUNCH, REPO};
 pub use kinds::{read_kinds, Declaration, Kind, KindAgents, KindSettings, Stage};
 pub use lock::{read_lock, spell_lock, Checked, Lock, LockEntry, Mismatch};
 pub use name::{check_name, NameRefusal};
-pub use package::{read_package, read_package_dir, Package};
+pub use package::{read_package, read_package_dir, Package, PackageKind};
 pub use refusal::{Problem, Refusal};
 pub use repeat::Repeat;
 pub use statechart::{Join, ParamAgents, Params, StatechartKind};

@@ -554,7 +554,12 @@ fn package_differences(
                     "{name}: returns {beside:?} unread beside the kind, and the case expects {unread:?}"
                 ));
             }
-            said.extend(kind_differences(name, &read.kind, kind));
+            match read.kind.simple() {
+                Some(read_kind) => said.extend(kind_differences(name, read_kind, kind)),
+                None => said.push(format!(
+                    "{name}: reads a statechart kind, and the case expects a simple kind"
+                )),
+            }
             said
         }
         (
