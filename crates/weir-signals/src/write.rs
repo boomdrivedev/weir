@@ -8,6 +8,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 use weir_capture::rec::{self, Record};
 use weir_capture::{CameIn, Key, RawFile, RuleMove, RuleOutcome, Taken};
 
@@ -177,7 +179,9 @@ impl InboxAt {
     /// The inbox `write` would leave, laid over this tip's files and read
     /// whole by every rule of [`InboxAt::read`], or the write refused
     /// naming the path. A write only adds: it refuses to replace a
-    /// `capture.rec`, `signals.rec` or `item.rec` the tip holds, or to give
+    /// `capture.rec`, `signals.rec` or `item.rec` the tip holds, but for a
+    /// rule's `item.rec` with `closed_at` added and nothing else changed,
+    /// the close of its window (128), or to give
     /// `moves.rec`, a batch's file or `sends.rec` a text that does not begin
     /// with the tip's and keep each record of it, so it appends after a
     /// record's end; `brief.md` alone is rewritten (41; core.21). Every
@@ -197,6 +201,7 @@ impl InboxAt {
                 continue;
             };
             match place {
+                Place::Item(_) if closes(tip, text) => {}
                 Place::Capture(_) | Place::Signals(_) | Place::Item(_) => {
                     return Err(NotTaken::new(
                         path,
@@ -669,6 +674,74 @@ impl InboxAt {
         Ok(write)
     }
 
+    /// The write of the close of the rule's item `item` at `closed_at`
+    /// (36, 128, 129): its `item.rec` again, as it was with `closed_at`
+    /// added, the one change a tip's `item.rec` ever takes, and, where it
+    /// holds signals, its `brief.md`, their excerpts as they stand, in the
+    /// order of their captures' event times, compared as instants, then of
+    /// their names, each after a blank line from the one before, with no
+    /// word added. Once closed it takes no more of its rule's joins, so the
+    /// rule's next join makes its next item (128). Whether its window has
+    /// come is the caller's to read, by cadence (129). Refused when the item
+    /// is not held, no rule made it, it is closed already, or `closed_at`
+    /// is not a time.
+    pub fn close_rule_item(&self, item: &str, closed_at: &str) -> Result<Write, Refused> {
+        let Some(held) = self.items.get(item) else {
+            return Err(NotTaken::new(item, "is no item the inbox holds").into());
+        };
+        if held.item.rule.is_none() {
+            return Err(NotTaken::field(
+                item,
+                "rule",
+                "is missing: only a rule's item has a window that closes",
+            )
+            .into());
+        }
+        if let Some(earlier) = &held.item.closed_at {
+            return Err(NotTaken::field(
+                item,
+                "closed_at",
+                format!("is `{earlier}` already, and an item closes once"),
+            )
+            .into());
+        }
+        check_time(closed_at).map_err(|why| NotTaken::field(item, "closed_at", why))?;
+        let closed = Item {
+            closed_at: Some(closed_at.to_string()),
+            ..held.item.clone()
+        };
+        let mut write = Write::new();
+        write.put(
+            Place::Item(item.to_string()).path(),
+            rec::write(&[closed.to_record()]),
+        );
+        let mut excerpts: Vec<(Option<OffsetDateTime>, &SignalId, &str)> = self
+            .item_signals(item)
+            .into_iter()
+            .filter_map(|id| {
+                let signal = self.signal(id)?;
+                let event_at = self
+                    .capture(&id.key)
+                    .and_then(|capture| OffsetDateTime::parse(&capture.event_at, &Rfc3339).ok());
+                Some((event_at, id, signal.excerpt.as_str()))
+            })
+            .collect();
+        excerpts.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(b.1)));
+        if !excerpts.is_empty() {
+            let text = excerpts
+                .iter()
+                .map(|(_, _, excerpt)| *excerpt)
+                .collect::<Vec<_>>()
+                .join("\n\n");
+            write.put(
+                Place::Brief(item.to_string()).path(),
+                format!("{}\n{text}", Format::brief_line()),
+            );
+        }
+        self.check(&write)?;
+        Ok(write)
+    }
+
     /// The write of one send of `items` to `target`: a `weir-send/1` record
     /// appended to each item's `sends.rec`, with the brief as it stands now
     /// and the outcome `open`, so the send keeps the brief whatever it
@@ -813,6 +886,30 @@ fn send_named<'a>(
     let names_it = |record: &&SendRecord| record.target == target && record.sent_at == sent_at;
     sends.iter().filter(|r| r.is_send()).find(names_it)?;
     Some(sends.iter().filter(|r| !r.is_send()).find(names_it))
+}
+
+/// Whether `text` is the item record `tip` with `closed_at` added and
+/// nothing else changed, of a rule's item not closed yet: the close of
+/// its window (128).
+fn closes(tip: &str, text: &str) -> bool {
+    let item = |text: &str| -> Option<Item> {
+        match rec::read(text).ok()?.as_slice() {
+            [record] => Item::from_record(record).ok(),
+            _ => None,
+        }
+    };
+    match (item(tip), item(text)) {
+        (Some(before), Some(after)) => {
+            before.rule.is_some()
+                && before.closed_at.is_none()
+                && after.closed_at.is_some()
+                && Item {
+                    closed_at: None,
+                    ..after
+                } == before
+        }
+        _ => false,
+    }
 }
 
 /// Whether `text` is `tip` with records appended: it begins with the tip's
