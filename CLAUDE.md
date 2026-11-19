@@ -44,7 +44,7 @@ which and why. Where `docs/architecture/` and the narrative docs
 disagree, `docs/architecture/` wins. A rule is sent to `core.md` or its
 area page with an id, the next free number in its area, amended in the
 same commit as the decision that changes it. The kit standard binds
-beside them as its `code` profile says (`.config/kit.toml`).
+beside them as its `code` profile says.
 
 @docs/architecture/core.md
 

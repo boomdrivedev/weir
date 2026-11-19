@@ -5,10 +5,29 @@ $schema: 'https://moonrepo.dev/schemas/project.json'
 tasks:
   # Every formatter treefmt.nix configures, writing nothing it would change
   # and keeping no cache outside the tree. It reads every tracked file: one
-  # that no formatter claims and no exclude names fails it.
+  # that no formatter claims and no exclude names fails it. Its inputs are
+  # the tree's files that git does not ignore: moon walks the root
+  # project's globs on disk, not through git, so each entry of .gitignore
+  # is negated here, and an entry added there is added here. A key naming
+  # a file the tree does not hold, such as the .mcp.json and
+  # .claude/settings.json devenv links in, is one sluice's check refuses
+  # (boomdrivedev/sluice's C.6), as sluice's and boomdrive's format tasks
+  # leave the same files out.
   format:
     command: 'treefmt --ci'
-    inputs: ['/**/*', '!/.devenv/**', '!/.moon/cache/**']
+    inputs:
+      - '/**/*'
+      - '!/target/**'
+      - '!/**/.devenv/**'
+      - '!/**/.devenv.flake.nix'
+      - '!/**/devenv.local.nix'
+      - '!/**/.pre-commit-config.yaml'
+      - '!/**/.moon/cache/**'
+      - '!/result'
+      - '!/result/**'
+      - '!/**/.DS_Store'
+      - '!/.mcp.json'
+      - '!/.claude/settings.json'
     tags: [check-fast]
     options: {runFromWorkspaceRoot: true}
   # rustc, cargo, clippy-driver and rustfmt are the build .prototools pins,

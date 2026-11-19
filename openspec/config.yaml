@@ -21,8 +21,8 @@ context: |
   Rules: weir's own are written into docs/architecture/ (core.md binds
   every change; an area's page beside it binds that area), with the
   decisions behind them in docs/adr/. Where weir has no rule of its own,
-  the kit standard binds as its code profile says (.config/kit.toml),
-  cited as kit:<id> (kit:testing.5): its rules are docs/architecture/ in
+  the kit standard binds as its code profile says, cited as
+  kit:<id> (kit:testing.5): its rules are docs/architecture/ in
   afterthought/kit-standard (local:
   ~/Code/github_afterthought/kit-standard/main/docs/architecture/).
 
