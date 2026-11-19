@@ -1,0 +1,37 @@
+--- stdout ---
+✓ spec/adapter-checks
+✓ spec/adapter-contract
+✓ spec/cadence
+✓ spec/capture-take
+✓ spec/conformance-pack
+✓ spec/delivery-calls
+✓ spec/delivery-cases
+✓ spec/delivery-records
+✓ spec/facts
+✓ spec/folder-drop
+✓ spec/host-conformance
+✓ spec/import-lines
+✓ spec/inbox-cases
+✓ spec/inbox-import
+✓ spec/inbox-items
+✓ spec/inbox-layout
+✓ spec/inbox-signals
+✓ spec/kind-identity
+✓ spec/kind-locks
+✓ spec/kinds
+✓ spec/meeting-file
+✓ spec/policy
+✓ spec/remote-limit
+✓ spec/shared-branch-cases
+✓ spec/shared-branch-lock
+✓ spec/shared-branch-write
+✓ spec/signals-folder-import
+✓ spec/statechart-engine
+✓ spec/statechart-kinds
+✓ spec/tick-cases
+✓ spec/weir-command
+Totals: 31 passed, 1 failed (32 items)
+Details: openspec validate kind-packages --type spec
+--- stderr ---
+✗ spec/kind-packages
+  ⚠ [WARNING] requirements[9]: Requirement text is very long (>500 characters). Move examples and edge cases into scenarios, or split it into separate requirements that each state one behavior.
