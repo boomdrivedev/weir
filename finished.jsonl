@@ -1,0 +1,6 @@
+{"id":3,"state":"landed","worktree":"pull/36","subject":"bolt/weir-keeps-no-leftover-settings"}
+{"id":4,"state":"landed","worktree":"pull/37","subject":"a rule's item closes once, at its window, with its brief"}
+{"id":5,"state":"withdrawn","worktree":"pull/38","subject":"change/a-package-holds-a-kind-of-either-format"}
+{"id":6,"state":"landed","worktree":"pull/38","subject":"change/a-package-holds-a-kind-of-either-format"}
+{"id":7,"state":"landed","worktree":"pull/39","subject":"fix/main--owed-reads-each-record-once"}
+{"id":8,"state":"landed","worktree":"pull/40","subject":"format hashes only tracked files"}

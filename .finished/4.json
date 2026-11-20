@@ -1,0 +1,26 @@
+{
+  "schema": "sluice/submission@1",
+  "id": 4,
+  "branch": "main",
+  "head": "a18a211e96dd0cc4c25ac889605139b719b1fe2c",
+  "from": {
+    "agent": "change/a-rules-item-closes-with-its-brief",
+    "worktree": "pull/37",
+    "head": "change/a-rules-item-closes-with-its-brief"
+  },
+  "submitted": "2026-11-19T15:17:31Z",
+  "after": [],
+  "priority": 0,
+  "attempt": 1,
+  "state": "landed",
+  "tested": {
+    "combination": "bab85d366a67e1f4e1c8b610cff9a4844a76f9b4",
+    "on": "4b7bdae2809e0f48e87d3cbad8c59ef8e2b73faf",
+    "submissions": [
+      4
+    ]
+  },
+  "result": "passed",
+  "landed_as": "63c995912c82491b8dc8438c34ff834d7d39f2db",
+  "subject": "a rule's item closes once, at its window, with its brief"
+}

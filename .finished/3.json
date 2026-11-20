@@ -1,0 +1,26 @@
+{
+  "schema": "sluice/submission@1",
+  "id": 3,
+  "branch": "main",
+  "head": "ee3b8c818e5a32f1086d94a035fb176e9dc9f1cc",
+  "from": {
+    "agent": "bolt/weir-keeps-no-leftover-settings",
+    "worktree": "pull/36",
+    "head": "bolt/weir-keeps-no-leftover-settings"
+  },
+  "submitted": "2026-11-19T12:19:20Z",
+  "after": [],
+  "priority": 0,
+  "attempt": 1,
+  "state": "landed",
+  "tested": {
+    "combination": "4abf9bb2cbc19fd5b1f9250fcbf0d8afa80a08f7",
+    "on": "073d2298eb47c7d6917d3131d28571d2f6eda319",
+    "submissions": [
+      3
+    ]
+  },
+  "result": "passed",
+  "landed_as": "4b7bdae2809e0f48e87d3cbad8c59ef8e2b73faf",
+  "subject": "bolt/weir-keeps-no-leftover-settings"
+}

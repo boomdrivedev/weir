@@ -1,0 +1,36 @@
+{
+  "schema": "sluice/submission@1",
+  "id": 5,
+  "branch": "main",
+  "head": "4239ccc70a01e065a9a3ab370603f4acc6b35206",
+  "from": {
+    "agent": "change/a-package-holds-a-kind-of-either-format",
+    "worktree": "pull/38",
+    "head": "change/a-package-holds-a-kind-of-either-format"
+  },
+  "submitted": "2026-11-19T19:01:30Z",
+  "after": [],
+  "priority": 0,
+  "attempt": 1,
+  "state": "withdrawn",
+  "tested": {
+    "combination": "3eacd3c09ac91ecfd147110d6bd5358c2ddf2634",
+    "on": "63c995912c82491b8dc8438c34ff834d7d39f2db",
+    "submissions": [
+      5
+    ]
+  },
+  "result": "failed",
+  "failed": [
+    {
+      "task": "root:specs",
+      "hash": "37e789dbc304a8bf9d6afa575574cde31c857b69a3dde8003df4d9dfd02708e4",
+      "log": "/Users/chuck/.local/share/boomdrive/repositories/boomdrivedev/weir/weir.git/sluice-remote/origin/.logs/main/c3/root:specs.log"
+    }
+  ],
+  "withdrawn": {
+    "by": "resubmission",
+    "at": "2026-11-19T19:10:32Z"
+  },
+  "subject": "change/a-package-holds-a-kind-of-either-format"
+}

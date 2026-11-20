@@ -1,0 +1,27 @@
+{
+  "schema": "sluice/submission@1",
+  "id": 8,
+  "branch": "main",
+  "head": "4b0905fcdb1b30d216f4b5e450ecc9e97371b64e",
+  "from": {
+    "agent": "fix/main--format-hashes-only-tracked-files",
+    "worktree": "pull/40",
+    "head": "fix/main--format-hashes-only-tracked-files"
+  },
+  "submitted": "2026-11-20T21:30:15Z",
+  "after": [],
+  "priority": 0,
+  "attempt": 1,
+  "state": "landed",
+  "tested": {
+    "combination": "7ba0293cf19b15aa83d4a88f0a2069c0c9d26613",
+    "on": "06fed00c0b294616d19bc6fd4d182f763a07c9e6",
+    "submissions": [
+      8
+    ]
+  },
+  "result": "passed",
+  "landed_as": "ce5f2fa41b7362ce3f8ca2c118bb834983d1c776",
+  "subject": "format hashes only tracked files",
+  "under_test_ms": 120000
+}
