@@ -4,6 +4,7 @@
 use crate::calls::Refusal;
 use crate::record::{Delivery, Handover, Record};
 use crate::text::{Key, Reader, Time};
+use std::collections::{HashMap, HashSet};
 
 /// What `owed` gives: each reader with something it has not confirmed, and
 /// every delivery done (111).
@@ -47,28 +48,38 @@ pub struct OwedDelivery {
 /// `now` when it is not a time. It reads the deliveries in the order the
 /// records hold them, the first under each key alone (101), and leaves out
 /// nothing a reader has not confirmed (105; I9). A hand-over or a
-/// confirmation naming no delivery of the records is passed over.
+/// confirmation naming no delivery of the records is passed over. It reads
+/// each record once and looks each delivery's readers, confirmations and
+/// hand-overs up by key, so its cost grows with the records, not with
+/// their square.
 pub fn owed(records: &[Record], now: &str) -> Result<Owed, Refusal> {
     let now = Time::parse(now, "now")?;
     let mut deliveries: Vec<&Delivery> = Vec::new();
-    let mut handovers: Vec<&Handover> = Vec::new();
-    let mut confirmed: Vec<(&Key, &Reader)> = Vec::new();
-    let mut known: Vec<&Reader> = Vec::new();
+    let mut keys: HashSet<&Key> = HashSet::new();
+    let mut handovers: HashMap<(&Key, &Reader), Vec<&Handover>> = HashMap::new();
+    let mut confirmed: HashSet<(&Key, &Reader)> = HashSet::new();
+    let mut known: HashSet<&Reader> = HashSet::new();
     for record in records {
         match record {
             Record::Delivery(delivery) => {
-                if !deliveries.iter().any(|held| held.key() == delivery.key()) {
+                if keys.insert(delivery.key()) {
                     deliveries.push(delivery);
                 }
             }
-            Record::Handover(handover) => handovers.push(handover),
+            Record::Handover(handover) => handovers
+                .entry((&handover.key, &handover.reader))
+                .or_default()
+                .push(handover),
             Record::Confirmation(confirmation) => {
-                confirmed.push((&confirmation.key, &confirmation.reader));
+                confirmed.insert((&confirmation.key, &confirmation.reader));
             }
-            Record::Known(name) => known.push(&name.reader),
+            Record::Known(name) => {
+                known.insert(&name.reader);
+            }
         }
     }
     let mut readers: Vec<ReaderOwed> = Vec::new();
+    let mut place: HashMap<&Reader, usize> = HashMap::new();
     let mut done = Vec::new();
     for delivery in deliveries {
         let mut every_reader_confirmed = true;
@@ -81,20 +92,20 @@ pub fn owed(records: &[Record], now: &str) -> Result<Owed, Refusal> {
                 delivery: delivery.clone(),
                 expired: now.instant() >= delivery.expires_at().instant(),
                 handovers: handovers
-                    .iter()
-                    .filter(|handover| {
-                        handover.key == *delivery.key() && handover.reader == *reader
-                    })
-                    .map(|handover| (*handover).clone())
-                    .collect(),
+                    .get(&(delivery.key(), reader))
+                    .map(|handed| handed.iter().map(|handover| (*handover).clone()).collect())
+                    .unwrap_or_default(),
             };
-            match readers.iter_mut().find(|owed| owed.reader == *reader) {
-                Some(owed_to) => owed_to.deliveries.push(owed),
-                None => readers.push(ReaderOwed {
-                    reader: reader.clone(),
-                    known: known.contains(&reader),
-                    deliveries: vec![owed],
-                }),
+            match place.get(reader) {
+                Some(&at) => readers[at].deliveries.push(owed),
+                None => {
+                    place.insert(reader, readers.len());
+                    readers.push(ReaderOwed {
+                        reader: reader.clone(),
+                        known: known.contains(reader),
+                        deliveries: vec![owed],
+                    });
+                }
             }
         }
         if every_reader_confirmed {

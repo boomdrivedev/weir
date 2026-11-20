@@ -99,7 +99,14 @@ fn a_package_that_reads() {
     let (_top, dir) = review_package();
     let package = read_package_dir(&dir, &held()).unwrap();
     assert_eq!(package.identity, held());
-    let prompts: Vec<_> = package.kind.stages.iter().map(|s| &s.prompt).collect();
+    let prompts: Vec<_> = package
+        .kind
+        .simple()
+        .expect("a simple kind")
+        .stages
+        .iter()
+        .map(|s| &s.prompt)
+        .collect();
     assert_eq!(prompts, ["prompts/review.md"]);
     assert_eq!(package.hash, read_package(FILES, &held()).unwrap().hash);
 }
@@ -150,9 +157,14 @@ fn a_package_of_a_kind_that_lands_with_no_stages() {
     let in_memory = read_package(files, &held).unwrap();
     assert_eq!(on_disk, in_memory);
     assert_eq!(on_disk.identity, held);
-    assert_eq!(on_disk.kind.name, "train");
-    assert!(on_disk.kind.lands);
-    assert!(on_disk.kind.stages.is_empty());
+    assert_eq!(on_disk.kind.simple().expect("a simple kind").name, "train");
+    assert!(on_disk.kind.simple().expect("a simple kind").lands);
+    assert!(on_disk
+        .kind
+        .simple()
+        .expect("a simple kind")
+        .stages
+        .is_empty());
     assert_eq!(on_disk.hash, ContentHash::of(files));
 }
 
@@ -171,16 +183,42 @@ fn a_package_of_a_kind_that_names_its_fix() {
     let in_memory = read_package(files, &held).unwrap();
     assert_eq!(on_disk, in_memory);
     assert_eq!(on_disk.identity, held);
-    assert_eq!(on_disk.kind.name, "train");
-    assert!(on_disk.kind.lands);
-    assert!(on_disk.kind.stages.is_empty());
-    assert_eq!(on_disk.kind.landing_fix, Some(identity("acme/fix@1")));
+    assert_eq!(on_disk.kind.simple().expect("a simple kind").name, "train");
+    assert!(on_disk.kind.simple().expect("a simple kind").lands);
+    assert!(on_disk
+        .kind
+        .simple()
+        .expect("a simple kind")
+        .stages
+        .is_empty());
     assert_eq!(
-        on_disk.kind.landing_fix.as_ref().map(ToString::to_string),
+        on_disk.kind.simple().expect("a simple kind").landing_fix,
+        Some(identity("acme/fix@1"))
+    );
+    assert_eq!(
+        on_disk
+            .kind
+            .simple()
+            .expect("a simple kind")
+            .landing_fix
+            .as_ref()
+            .map(ToString::to_string),
         Some("acme/fix@1".to_owned())
     );
-    assert_eq!(on_disk.kind.max_landing_fixes, Some(2));
-    assert!(on_disk.kind.sections.is_empty());
+    assert_eq!(
+        on_disk
+            .kind
+            .simple()
+            .expect("a simple kind")
+            .max_landing_fixes,
+        Some(2)
+    );
+    assert!(on_disk
+        .kind
+        .simple()
+        .expect("a simple kind")
+        .sections
+        .is_empty());
     assert_eq!(on_disk.hash, ContentHash::of(files));
 }
 

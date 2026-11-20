@@ -14,6 +14,7 @@ use crate::hash::ContentHash;
 use crate::identity::Identity;
 use crate::kinds::{read_kinds, Kind};
 use crate::refusal::{Problem, Problems, Refusal};
+use crate::statechart::StatechartKind;
 
 /// The file at a package's root that declares its kind (C.4).
 const KIND_TOML: &str = "kind.toml";
@@ -25,9 +26,9 @@ pub struct Package {
     /// The identity it was held at, which its declaration's name and
     /// version are (89; core.43).
     pub identity: Identity,
-    /// Its one kind, as `read-kinds` reads it, each part a stage names
-    /// returned as written (53, 89).
-    pub kind: Kind,
+    /// Its one kind, of either format, as `read-kinds` reads it, each part
+    /// a stage names returned as written (53, 89, 92).
+    pub kind: PackageKind,
     /// Its content hash, over every regular file it holds (90, C.4).
     pub hash: ContentHash,
     /// Every top-level key of its `kind.toml` but `kinds`, unread and as
@@ -35,14 +36,61 @@ pub struct Package {
     pub sections: Table,
 }
 
+/// A package's one kind, a simple kind or a statechart kind, as
+/// `read-kinds` reads each (51, 89, 92).
+#[derive(Debug, Clone, PartialEq)]
+pub enum PackageKind {
+    /// A simple kind, its stages in order (52).
+    Simple(Kind),
+    /// A statechart kind, its statechart with each state's parameters
+    /// (94); every part its states' parameters name is its reader's to
+    /// read, since the stage template's parameters beside weir's are the
+    /// reader's (95, 98).
+    Statechart(StatechartKind),
+}
+
+impl PackageKind {
+    /// The kind's name.
+    pub fn name(&self) -> &str {
+        match self {
+            PackageKind::Simple(kind) => &kind.name,
+            PackageKind::Statechart(kind) => kind.name(),
+        }
+    }
+
+    /// The kind's version.
+    pub fn version(&self) -> u64 {
+        match self {
+            PackageKind::Simple(kind) => kind.version,
+            PackageKind::Statechart(kind) => kind.version(),
+        }
+    }
+
+    /// The simple kind, or `None` for a statechart kind.
+    pub fn simple(&self) -> Option<&Kind> {
+        match self {
+            PackageKind::Simple(kind) => Some(kind),
+            PackageKind::Statechart(_) => None,
+        }
+    }
+
+    /// The statechart kind, or `None` for a simple kind.
+    pub fn statechart(&self) -> Option<&StatechartKind> {
+        match self {
+            PackageKind::Simple(_) => None,
+            PackageKind::Statechart(kind) => Some(kind),
+        }
+    }
+}
+
 /// `read-package` over a package's files, each a path within the package
 /// and its bytes, as a tool holds its built-in kinds, and the identity it
 /// is held at (92). It gives the package's one kind, that identity and
 /// its content hash, or refuses the package whole, naming every field
-/// that fails it (57, 89). A statechart kind its `kind.toml` declares is
-/// counted among its kinds, and a package whose one kind is a statechart
-/// kind is refused naming the kind, since a package's one kind is a simple
-/// kind's (design 12 of the change that reads statechart kinds; core.43).
+/// that fails it (57, 89). Its one kind is of either format: a statechart
+/// kind its `kind.toml` declares is counted among its kinds, and a package
+/// whose one kind is a statechart kind gives it, checked against the
+/// identity it is held at as a simple kind is (89, 92; core.43).
 ///
 /// A path is relative, with `/` between segments none of which is empty,
 /// `.` or `..`, and names one file; a path that is not, or that lies
@@ -243,9 +291,7 @@ fn read(
 
     if let Some(declaration) = &declaration {
         // Exactly one kind, of either format, and settings given to none
-        // other, which would name a kind outside the package (57, 89). A
-        // package whose one kind is a statechart kind is refused naming it,
-        // since a package's one kind is a simple kind's (design 12; core.43).
+        // other, which would name a kind outside the package (57, 89).
         let mut names: Vec<&String> = declaration
             .kinds
             .keys()
@@ -254,14 +300,7 @@ fn read(
         names.sort();
         let names: Vec<_> = names.into_iter().map(|name| format!("`{name}`")).collect();
         match names.len() {
-            1 => {
-                if let Some(name) = declaration.statecharts.keys().next() {
-                    problems.refuse(
-                        &format!("kinds.{}", key(name)),
-                        "is a statechart kind, and read-package reads a package of a simple kind alone",
-                    );
-                }
-            }
+            1 => {}
             0 => problems.refuse(
                 "kinds",
                 "declares no kind, and a package declares exactly one kind",
@@ -285,15 +324,26 @@ fn read(
 
         // The identity held at, its name and version the declaration's
         // (89; core.43).
-        if let [kind] = declaration.kinds.values().collect::<Vec<_>>()[..] {
-            let at = format!("kinds.{}", key(&kind.name));
-            let declared = format!("{}/{}@{}", held.source(), kind.name, kind.version);
+        let one: Vec<(&str, u64)> = declaration
+            .kinds
+            .values()
+            .map(|kind| (kind.name.as_str(), kind.version))
+            .chain(
+                declaration
+                    .statecharts
+                    .values()
+                    .map(|kind| (kind.name(), kind.version())),
+            )
+            .collect();
+        if let [(name, version)] = one[..] {
+            let at = format!("kinds.{}", key(name));
+            let declared = format!("{}/{}@{}", held.source(), name, version);
             let reason = format!(
                 "makes the package `{declared}`, but it is held at `{held}`, and a package is held at its declaration's name and version"
             );
-            if held.name() != kind.name {
+            if held.name() != name {
                 problems.refuse(&at, reason);
-            } else if held.version() != kind.version {
+            } else if held.version() != version {
                 problems.refuse(&field(&at, "version"), reason);
             }
         }
@@ -326,6 +376,13 @@ fn read(
             let kind = declaration
                 .kinds
                 .into_values()
+                .map(PackageKind::Simple)
+                .chain(
+                    declaration
+                        .statecharts
+                        .into_values()
+                        .map(PackageKind::Statechart),
+                )
                 .next()
                 .expect("a package read declares one kind");
             Ok(Package {
